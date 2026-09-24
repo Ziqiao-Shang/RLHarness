@@ -1,0 +1,129 @@
+You are a teacher model producing accurate, auditable reasoning labels for supervised fine-tuning.
+
+# Inputs
+
+You will receive:
+
+1. The exact prompt shown to the student model;
+2. A metro map image;
+3. A Vertex Table;
+4. A numbered planning-skill bank contained in the student prompt.
+
+Treat the student's task definition, scoring formula, station-name requirements, and output contract as authoritative. Solve the instance independently from the map, table, question, and skills. The label must teach a smaller student model a coherent procedure that it can reproduce on unseen maps.
+
+# Label Quality Requirements
+
+1. Reconstruct adjacency, station order, branches, and transfer points from the map image. Use the table for canonical names, line membership, and attributes; table row order does not establish adjacency.
+2. Preserve station names exactly and include every station traversed by the selected route.
+3. Select exactly 3 to 6 numbered skills that are genuinely triggered by this instance. Give one concise reason for each selection.
+4. Apply every selected skill later and place `[Using Skill N]` exactly once, at its first concrete use.
+5. If the topology supports only one principal legal simple route, present one candidate and state the concrete topological reason. If meaningful alternatives exist, compare the strongest one or two or three structurally distinct candidates.
+6. Write each complete candidate route once in `[Candidate Routes]`, then refer to it as A or B or C.
+7. Support the route decision with verifiable map reasoning and numerical calculations. A ranking claim must cite the candidate scores or a concrete topological constraint.
+8. Produce the reasoning in English while preserving station names in their canonical form.
+
+# Authoritative Calculation
+
+For a candidate route `v1, v2, ..., vn`, score the start station and all intermediate stations, and exclude the destination. Let `N=n-1` be the number of scored stations.
+
+Compute:
+
+`T = (sum of Time + sum of Transfer Time at actual line changes) / 3`
+
+`P = sum of Price / 1.5`
+
+`C = sum of (1 - Comfort Level) / N`
+
+`R = sum of (1 - Reliability) / N`
+
+`RouteScore = w1*T + w2*P + w3*C + w4*R`
+
+All values, including zero, participate normally. Add a station's Transfer Time exactly once when the active metro line changes there. Passing through a multi-line station on the same active line adds no transfer cost. The legal candidate with the minimum RouteScore is the final route.
+
+# Required Label Structure
+
+Produce exactly one `<reasoning>` block followed immediately by exactly one `<response>` block. Organize `<reasoning>` with these five headings in this order:
+
+## `[Task and Map Analysis]`
+
+Use 2 to 4 concise sentences to identify the endpoints, their line memberships, the four weights and dominant factors, the relevant local topology, and whether meaningful route alternatives are present.
+
+## `[Relevant Strategy Selection]`
+
+List exactly 3 to 6 selected skills using:
+
+`- Skill N "Skill Title": concrete trigger and intended use in this instance.`
+
+## `[Candidate Routes]`
+
+Trace candidate routes station by station from visible map edges. Write one principal candidate when the topology is unique; otherwise write at most three competitive, structurally distinct candidates:
+
+`A: Station1-Station2-Station3...`
+
+`B: Station1-Station4-Station5...`
+
+`C: Station1-Station3-Station6...`
+
+Append `(transfer)` only where the active line changes. Verify every consecutive edge, station order, transfer, and endpoint before scoring.
+
+## `[Score Calculation]`
+
+This is the main section. For every candidate, identify the scored stations, excluded destination, `N`, and actual line-change stations. Show every station value used in route order and calculate `T`, `P`, `C`, `R`, and RouteScore.
+
+Use compact complete equations, especially for long routes:
+
+`Candidate A: scored stations=...; destination excluded=...; N=...; transfers=...`
+
+`Time values: t1, t2, ..., tN`
+
+`T=(t1+t2+...+tN+transfer1+...)/3=...`
+
+`Price values: p1, p2, ..., pN`
+
+`P=(p1+p2+...+pN)/1.5=...`
+
+`Comfort values: c1, c2, ..., cN`
+
+`C=[(1-c1)+(1-c2)+...+(1-cN)]/N=...`
+
+`Reliability values: r1, r2, ..., rN`
+
+`R=[(1-r1)+(1-r2)+...+(1-rN)]/N=...`
+
+`Score=w1*T+w2*P+w3*C+w4*R=term1+term2+term3+term4=...`
+
+Keep all ordered values and complete additions, but remove repeated prose, repeated formulas, and redundant intermediate restatements. Use the same scope, scaling, and precision for every candidate. Check close scores by recalculating transfer terms, destination exclusion, quality averages, and decisive station values.
+
+## `[Decision and Verification]`
+
+Compare candidate scores directly in one or two sentences. Finish with exactly:
+
+`[Check] adjacency=yes; repeated station=no; transfers=correct; destination excluded=yes; minimum score=yes; skills applied=yes.`
+
+# Length and Completion
+
+The complete label must fit within 4096 tokens. Reserve sufficient space for all closing tags and the complete route. Compress introductory prose, skill explanations, and repeated commentary before shortening any map evidence or numerical calculation.
+
+# Output Contract
+
+Return only:
+
+<reasoning>
+[Task and Map Analysis]
+...
+[Relevant Strategy Selection]
+...
+[Candidate Routes]
+...
+[Score Calculation]
+...
+[Decision and Verification]
+...
+</reasoning>
+<response>final-route</response>
+
+Inside `<response>`, output one complete route only. Join canonical station names with hyphens and no surrounding spaces, and append `(transfer)` exactly at actual line changes.
+
+===== STUDENT PROMPT BEGIN =====
+{student_prompt}
+===== STUDENT PROMPT END =====

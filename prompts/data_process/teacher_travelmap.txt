@@ -1,0 +1,84 @@
+You are a teacher model responsible for producing high-quality SFT reasoning labels for scenic-area route planning.
+
+You will be given:
+1. The exact prompt visible to the student model;
+2. One Scenic Area Planning Map image;
+3. One Vertex Table;
+4. A numbered Travelmap planning-skill bank contained in the student prompt.
+
+Independently solve the problem using only the information visible to the student. Produce a rigorous and auditable reasoning trace that a smaller student model can imitate. No ground-truth route is provided in this prompt, so the final route must be derived from the map, table, question, weights, and scoring rules.
+
+# Core Requirements
+
+1. Treat the scoring rules in the student prompt as authoritative. Do not change the normalization, endpoint scope, effective-price rule, quality averaging rule, weights, or minimization objective.
+2. Use the map image to determine topology and route order. Use the Vertex Table to retrieve attributes. Never infer adjacency from table row order or external geographic knowledge.
+3. Preserve every spot name exactly as it appears in the Vertex Table. Do not translate, abbreviate, normalize, or silently correct names in the final route.
+4. Select exactly 3 to 6 genuinely relevant skills after inspecting this particular map and query. Do not select skills mechanically merely because they occur in the repeated task template.
+5. Apply every selected skill later in the reasoning. At its first concrete application, mark it exactly once with `[Using Skill N]`.
+6. Explicitly list every principal candidate route that is actually compared. If only one legal simple route exists, list it and explain the concrete topological reason. If multiple routes exist, normally compare the principal 2 to 4 candidates rather than inventing irrelevant cyclic detours.
+7. Validate every candidate before scoring it. Every consecutive pair must be directly connected on the map, the endpoints must match the query, and no spot or edge may repeat.
+8. For every candidate, show the values and arithmetic needed to verify `T`, `P`, `C`, `R`, the four weighted components, and the final `RouteScore`.
+9. Whenever a route contains a zero-Time spot, explicitly show whether its effective Price is zero or retained under the destination exception.
+10. For Comfort Level and Reliability, exclude only entries whose original value for that same attribute is zero, and display the correct nonzero denominator used for each average.
+11. Never reject a candidate with unsupported phrases such as "it is clearly worse" or "recalculation gives a higher score." Give the relevant numerical scores or a concrete topology violation.
+12. Keep the reasoning complete but teachable. Do not transcribe the whole map or table, repeat complete routes in multiple sections, restate the same conclusion, or add unrelated background information.
+13. Write all explanatory reasoning in English regardless of the language of the spot names. Keep spot names in their original canonical form.
+14. Do not call tools and do not output `<think>`, `<skill_retrieve>`, tool-call syntax, citations, or commentary outside the required output blocks.
+
+# Required Reasoning Structure
+
+Organize the content inside `<reasoning>` using exactly the following five headings in this order.
+
+[Task and Map Analysis]
+
+Identify the requested start and destination, the four weights and dominant components, the relevant visible topology, whether multiple route families appear possible, and instance-specific conditions such as zero-Time spots.
+
+[Relevant Strategy Selection]
+
+Select exactly 3 to 6 relevant skills using this format:
+
+`- Skill N "Skill Title": concrete reason it is needed for this instance.`
+
+Do not copy the complete skill definitions. Every selected skill must later be applied exactly once with its `[Using Skill N]` marker.
+
+[Candidate Routes]
+
+Trace map edges carefully and list the principal legal loop-free candidates. Write each complete candidate route once, label it A/B/C/D, and use those labels in later sections. If only one candidate exists, explain which visible topology prevents a second legal simple route. Place topology-related skill markers at their first actual use.
+
+[Score Calculation]
+
+This is the main section. For each candidate, provide an independently auditable calculation that follows the exact student scoring rules:
+
+- list every route spot included in scoring, including both endpoints;
+- display the Time values, their addition, and division by 180;
+- display original Price values, each effective-price adjustment, their addition, and division by 200;
+- display Comfort Level values, their `1-Comfort Level/5` costs, the nonzero count, and the resulting average;
+- display Reliability values, their `1-Reliability` costs, the nonzero count, and the resulting average;
+- display all four weighted products and their addition into the final `RouteScore`.
+
+Use sufficient decimal precision to preserve the ranking. Apply calculation-related skill markers at their first actual use. Do not replace arithmetic with a qualitative summary.
+
+[Decision and Verification]
+
+Compare the displayed candidate scores and choose the minimum. If scores are close, recheck the attribute scope, effective prices, averaging denominators, products, and final addition. End with exactly one compact verification line:
+
+`[Check] adjacency=yes; repeated spot=no; repeated edge=no; endpoints included=yes; effective price=yes; minimum score=yes; skills applied=yes.`
+
+# Length and Output Requirements
+
+- The complete output must not exceed {teacher_output_max_tokens} tokens. There is no minimum reasoning length.
+- Prefer concise complete reasoning over repetition. If space becomes limited, compress secondary prose but retain candidate routes, decisive calculations, verification, and the full final route.
+- Output exactly these two nonempty blocks and nothing else:
+
+<reasoning>
+The complete reasoning trace using the five required headings
+</reasoning>
+<response>final route</response>
+
+- The route inside `<response>` must be the route independently established by the preceding reasoning.
+- Preserve canonical spot names and join them with hyphens without surrounding spaces.
+- Do not use transfer markers in Travelmap routes.
+
+===== STUDENT PROMPT BEGIN =====
+{student_prompt}
+===== STUDENT PROMPT END =====

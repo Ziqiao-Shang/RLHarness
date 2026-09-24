@@ -1,0 +1,247 @@
+# Role
+You are a scenic-area route-planning algorithm. Use only the attached Scenic Area Planning Map and Vertex Table to find the legal route with the minimum weighted cost.
+
+# Input Task
+{question}
+
+# Weights
+- Time: {w1}
+- Price: {w2}
+- Comfort Level: {w3}
+- Reliability: {w4}
+
+# Input Data
+The input contains one Scenic Area Planning Map image and one Vertex Table. The map provides the route topology. The table provides each spot's `Time`, `Price`, `Comfort Level`, and `Reliability`.
+
+# Authoritative Scoring Rules
+For a candidate route `v1, v2, ..., vn`, include the attributes of every spot on the route, including the starting spot `v1`, all intermediate spots, and the destination spot `vn`.
+
+Define the effective price `P_eff(v)` as follows: if `v` is not the destination and `Time(v) = 0`, use `P_eff(v) = 0`; otherwise use `P_eff(v) = Price(v)`. In particular, the destination retains its original Price even when its Time is zero.
+
+Compute:
+
+`T = sum(Time(v)/180)`
+
+`P = sum(P_eff(v)/200)`
+
+`C = average(1-Comfort Level(v)/5 over spots whose original Comfort Level is nonzero)`
+
+`R = average(1-Reliability(v) over spots whose original Reliability is nonzero)`
+
+When calculating `C` and `R`, exclude only entries whose original value for that specific attribute is zero. A spot with `Time = 0` still participates normally in the Comfort Level and Reliability calculations when those values are nonzero.
+
+Compute `RouteScore = {w1}*T + {w2}*P + {w3}*C + {w4}*R`. Compare all principal legal, loop-free candidate routes using exactly the same formula and select the route with the minimum `RouteScore`. A spot and an edge cannot appear more than once in a route.
+
+# Planning Skills
+
+1. Derive Topology from Map Edges
+   When to apply: When identifying adjacency, reconstructing the local graph, or building candidate routes.
+   Procedure: Determine connections edge by edge strictly from the continuous lines drawn in the map image. Travelmap graphs are undirected (bidirectional) networks of scenic routes; trace each drawn polyline from node endpoint to node endpoint rather than assuming spatial proximity, row order, or external geographic knowledge implies a connection.
+   Check: Every consecutive pair of spots must be connected by one direct visible line segment on the map without skipping intermediate labeled icons or inventing imaginary shortcuts between degree-1 leaf nodes.
+
+2. Expand Every Traversed Spot
+   When to apply: When tracing a route through a chain, branch, intersection, bend, or visually dense region.
+   Procedure: Follow the chosen through-path continuously from spot to spot and record every labeled spot on that through-path, ensuring intermediate nodes situated along the line (e.g. transit stations, landmarks) are included. At each junction, distinguish trunk through-corridors from terminal side branches/dead ends (degree-1 leaf nodes connected only to that junction); never treat a leaf node as a through-bridge or insert a dead-end spur unless it is the designated start or destination.
+   Check: Do not skip a visible intermediate spot on the path, insert a dead-end spur that requires backtracking, reverse route order, or invent non-existent connections.
+
+3. Normalize Spot Names
+   When to apply: When the map and Vertex Table use aliases, abbreviations, translations, punctuation, or similar-looking names.
+   Procedure: Use map position and neighboring spots to match each map node to exactly one canonical Vertex Table entry. Use that table name consistently in calculations and final output.
+   Check: Never attach one spot's attributes to another spot or treat two spellings of the same spot as separate vertices.
+
+4. Separate Map Topology from Table Attributes
+   When to apply: Whenever determining adjacency and retrieving numerical attributes.
+   Procedure: Use the map image only to establish direct connections and route order. Use the Vertex Table only to retrieve the four attributes after a spot has been identified.
+   Check: Table row order does not imply map adjacency, and numerical similarity does not create an edge.
+
+5. Enumerate Structurally Distinct Candidates
+   When to apply: When branches, cycles, crossings, or multiple connecting corridors may provide different legal routes.
+   Procedure: Construct the principal structurally distinct loop-free candidates supported by visible edges. Include alternatives that could plausibly change the weighted decision, but omit routes that are merely long cyclic detours.
+   Check: Do not select the route solely because it has the fewest spots, looks most direct, or is the first route noticed.
+
+6. Distinguish Unique and Multi-Path Topologies
+   When to apply: After the initial topology inspection and before numerical scoring.
+   Procedure: Determine whether exactly one legal simple route exists. If so, retain that route and state the concrete topological reason. If alternatives exist, compare the principal legal candidates.
+   Check: Do not invent alternatives for a unique path or declare a route unique before checking visible branches and reconnections.
+
+7. Compute Weighted Cost Consistently
+   When to apply: After the legal candidate routes have been fixed.
+   Procedure: For every candidate, compute `T`, `P`, `C`, and `R` to 6 decimal places with the authoritative formula. Show each individual weighted product term (`w_i * metric`) before summing them to obtain the final `RouteScore` (to 6 decimal places).
+   Check: Use identical scaling, precision, and attribute scope for every candidate. Do not replace the formula with an informal preference or shortest-route heuristic.
+
+8. Include Both Route Endpoints
+   When to apply: When building the attribute list for a candidate route.
+   Procedure: Include the start, every intermediate spot, and the destination in the Time, Price, Comfort Level, and Reliability calculations, subject only to the effective-price and nonzero-average rules.
+   Check: Do not omit either endpoint or use a different spot set for different attributes.
+
+9. Average Nonzero Quality Costs
+   When to apply: When calculating Comfort Level and Reliability costs.
+   Procedure: Normalize each nonzero Comfort Level using `Comfort Level/5`, convert it to `1-Comfort Level/5`, and average those costs. Separately convert each nonzero Reliability value to `1-Reliability` and average those costs.
+   Check: Exclude an entry only when its original value for that same quality attribute is zero. Do not sum quality costs without dividing by the correct nonzero count.
+
+10. Apply the Zero-Time Effective-Price Rule
+    When to apply: Whenever any route spot has `Time = 0`.
+    Procedure: Set Price to zero only when that zero-Time spot is not the destination. If the zero-Time spot is the destination, retain its original Price. Normalize the resulting effective prices by 200.
+    Check: Do not erase the destination's Price, retain an intermediate transport hub's Price, or omit its other nonzero attributes.
+
+11. Recheck Close Candidate Scores
+    When to apply: When two candidates have close totals, when different components favor different routes, or when one weight dominates the objective.
+    Procedure: Recompute the component sums, quality averages, effective prices, weighted products, and final addition for the competing candidates before deciding.
+    Check: A dominant weight guides attention but does not replace the complete weighted calculation. Every ranking claim must cite numerical scores.
+
+12. Validate Every Edge Before Scoring
+    When to apply: Before admitting a candidate to numerical comparison.
+    Procedure: Verify the requested start and destination, each consecutive map edge, every intermediate spot, and the absence of repeated spots or edges.
+    Check: Reject candidates containing an invented edge, skipped spot, wrong endpoint, repeated spot, repeated edge, or loop.
+
+13. Perform a Final Audit of the Best Candidate
+    When to apply: After identifying the current minimum-score candidate.
+    Procedure: Audit the complete route, its table lookups, effective-price decisions, averaging denominators, weighted score, and agreement between the reasoning and final route.
+    Check: If any item fails, correct the calculation or choose another validated candidate before answering.
+
+14. Output the Complete Canonical Route
+    When to apply: Once the best legal route has been established.
+    Procedure: Output the start, every intermediate spot, and the destination in travel order using canonical Vertex Table names joined by hyphens.
+    Check: Do not omit spots, translate names, add explanations inside the route, or place spaces around separators.
+
+15. Prioritize a Complete Response
+    When to apply: When the route is known or the remaining output budget is limited.
+    Procedure: Always finish one complete `<reasoning>...</reasoning>` block followed immediately by one complete `<response>...</response>` block. Compress secondary explanation before sacrificing the final route.
+    Check: Never return a truncated route, an empty block, a missing closing tag, or extra text outside the two required blocks.
+
+# How to Use the Skills
+Treat the skills as optional procedures rather than facts or answers. Select only 3 to 6 skills that are genuinely relevant to the current map and query. In `[Relevant Strategy Selection]`, state briefly why each selected skill is needed. Apply every selected skill later in the reasoning and mark it exactly once, at its first concrete use, with `[Using Skill N]`. Do not select skills mechanically from the repeated task template.
+
+# Required Procedure
+Inside `<reasoning>`, use exactly these five section headings in this order:
+
+`[Task and Map Analysis]`
+`[Relevant Strategy Selection]`
+`[Candidate Routes]`
+`[Score Calculation]`
+`[Decision and Verification]`
+
+Select only the strategies relevant to the current instance. Compare the principal legal loop-free routes and show enough numerical detail to make the final decision independently verifiable. Do not mechanically enumerate irrelevant strategies, transcribe the complete map or Vertex Table, or omit the final route because of excessive reasoning. Use A/B/C to avoid copying complete routes repeatedly during calculation, and finish with one compact `[Check]` line.
+
+
+# Few-Shot Demonstrations
+The following examples demonstrate the required reasoning structure, skill-use format, scoring rules, and output discipline. Do not copy their spot names, values, routes, or conclusions into the current problem.
+
+## Example 1: One Legal Route
+Task: According to the Scenic Area Planning Map and Vertex Table, what is the ideal path optimized for all four factors - time, cost, comfort, and reliability - from 南禅寺 to 应县木塔? The weights are Time 0.152113, Price 0.496647, Comfort Level 0.049317, and Reliability 0.301923.
+
+Assistant:
+<reasoning>[Task and Map Analysis]
+The task requires finding the optimal route from 南禅寺 to 应县木塔 based on the provided map and Vertex Table. The evaluation weights are Time 0.152113, Price 0.496647, Comfort Level 0.049317, and Reliability 0.301923. Price is the dominant factor, followed by Reliability, Time, and Comfort Level. Inspecting the map topology between 南禅寺 and 应县木塔 shows that this portion of the scenic area is a simple linear chain without alternative corridors or branch loops. None of the route spots has Time = 0.
+
+[Relevant Strategy Selection]
+- Skill 1 "Derive Topology from Map Edges": trace the contiguous direct edges strictly from the map image.
+- Skill 6 "Distinguish Unique and Multi-Path Topologies": confirm whether the linear corridor permits only one legal simple route.
+- Skill 8 "Include Both Route Endpoints": include 南禅寺, 应县木塔, and every intermediate spot in every score component.
+- Skill 9 "Average Nonzero Quality Costs": calculate the Comfort Level and Reliability costs with the correct nonzero denominators.
+- Skill 7 "Compute Weighted Cost Consistently": apply the four weights to the normalized components.
+
+[Candidate Routes]
+Tracing the map edges from 南禅寺 toward 应县木塔 [Using Skill 1]: 南禅寺 connects directly to 佛光寺, 佛光寺 connects directly to 崇福寺, and 崇福寺 connects directly to 应县木塔. Because this section has no alternative branch or reconnection, exactly one legal loop-free route exists [Using Skill 6]:
+
+A: 南禅寺-佛光寺-崇福寺-应县木塔
+
+[Score Calculation]
+[Using Skill 8] Candidate A includes all four spots:
+1. 南禅寺: Time=39, Price=40, Comfort Level=3.9, Reliability=0.326027
+2. 佛光寺: Time=27, Price=70, Comfort Level=4.3, Reliability=0.421918
+3. 崇福寺: Time=44, Price=45, Comfort Level=4.1, Reliability=0.843836
+4. 应县木塔: Time=14, Price=50, Comfort Level=3.1, Reliability=0.756164
+
+Time: T=(39+27+44+14)/180=124/180=0.688889
+
+Price: every Time value is nonzero, so every effective Price equals its original Price.
+P=(40+70+45+50)/200=205/200=1.025000
+
+[Using Skill 9] Comfort Level: all four original values are nonzero.
+C=[(1-3.9/5)+(1-4.3/5)+(1-4.1/5)+(1-3.1/5)]/4
+=(0.22+0.14+0.18+0.38)/4=0.920000/4=0.230000
+
+Reliability: all four original values are nonzero.
+R=[(1-0.326027)+(1-0.421918)+(1-0.843836)+(1-0.756164)]/4
+=(0.673973+0.578082+0.156164+0.243836)/4=1.652055/4=0.413014
+
+[Using Skill 7] Weighted score:
+RouteScore(A)=0.152113*0.688889+0.496647*1.025000+0.049317*0.230000+0.301923*0.413014
+=0.104789+0.509063+0.011343+0.124698=0.749893
+
+[Decision and Verification]
+Candidate A is the unique legal loop-free route and has the verified RouteScore 0.749893.
+
+[Check] adjacency=yes; repeated spot=no; repeated edge=no; endpoints included=yes; effective price=yes; minimum score=yes; skills applied=yes.</reasoning>
+<response>南禅寺-佛光寺-崇福寺-应县木塔</response>
+
+## Example 2: Compare Multiple Candidates and Apply the Zero-Time Price Rule
+Task: According to the Scenic Area Planning Map and Vertex Table, give the multi-objective optimized path considering time, cost, comfort, and reliability from 哈巴雪山 to 独克宗古城. The weights are Time 0.215323, Price 0.218079, Comfort Level 0.343605, and Reliability 0.222993.
+
+Assistant:
+<reasoning>[Task and Map Analysis]
+The objective is to find the legal loop-free route from 哈巴雪山 to 独克宗古城 with the minimum weighted cost. The weights are Time 0.215323, Price 0.218079, Comfort Level 0.343605, and Reliability 0.222993, so Comfort Level has the largest weight. The map shows one corridor through 小中甸花海 and another through 虎跳峡 and 香格里拉机场. 香格里拉机场 is an intermediate spot with Time = 0, so its effective Price must be set to zero.
+
+[Relevant Strategy Selection]
+- Skill 1 "Derive Topology from Map Edges": trace direct visible connections between 哈巴雪山 and 独克宗古城.
+- Skill 5 "Enumerate Structurally Distinct Candidates": compare the two principal map-supported corridors.
+- Skill 8 "Include Both Route Endpoints": score the start, destination, and every intermediate spot.
+- Skill 10 "Apply the Zero-Time Effective-Price Rule": handle the intermediate zero-Time spot 香格里拉机场 correctly.
+
+[Candidate Routes]
+[Using Skill 1] Tracing the visible topology reveals two structurally distinct simple paths [Using Skill 5]:
+
+A: 哈巴雪山-小中甸花海-独克宗古城
+B: 哈巴雪山-虎跳峡-香格里拉机场-独克宗古城
+
+[Score Calculation]
+[Using Skill 8] Candidate A includes 哈巴雪山, 小中甸花海, and 独克宗古城.
+
+Time: T_A=(13+40+21)/180=74/180=0.411111
+
+Price: P_A=(45+20+30)/200=95/200=0.475000
+
+Comfort Level: all three original values are nonzero.
+C_A=[(1-3.2/5)+(1-4.0/5)+(1-4.5/5)]/3
+=(0.36+0.20+0.10)/3=0.660000/3=0.220000
+
+Reliability: all three original values are nonzero.
+R_A=[(1-0.413699)+(1-0.958904)+(1-0.457534)]/3
+=(0.586301+0.041096+0.542466)/3=1.169863/3=0.389954
+
+RouteScore(A)=0.215323*0.411111+0.218079*0.475000+0.343605*0.220000+0.222993*0.389954
+=0.088522+0.103588+0.075593+0.086957=0.354660
+
+Candidate B includes 哈巴雪山, 虎跳峡, 香格里拉机场, and 独克宗古城.
+
+Time: T_B=(13+44+0+21)/180=78/180=0.433333
+
+[Using Skill 10] Original Prices are 45, 50, 200, and 30. Because 香格里拉机场 has Time = 0 and is not the destination, its effective Price is 0.
+P_B=(45+50+0+30)/200=125/200=0.625000
+
+Comfort Level: all four original values are nonzero.
+C_B=[(1-3.2/5)+(1-4.6/5)+(1-3.6/5)+(1-4.5/5)]/4
+=(0.36+0.08+0.28+0.10)/4=0.820000/4=0.205000
+
+Reliability: all four original values are nonzero.
+R_B=[(1-0.413699)+(1-0.978082)+(1-0.816438)+(1-0.457534)]/4
+=(0.586301+0.021918+0.183562+0.542466)/4=1.334247/4=0.333562
+
+RouteScore(B)=0.215323*0.433333+0.218079*0.625000+0.343605*0.205000+0.222993*0.333562
+=0.093307+0.136299+0.070439+0.074382=0.374427
+
+[Decision and Verification]
+Candidate A has RouteScore 0.354660, lower than Candidate B at 0.374427, so Candidate A is selected.
+
+[Check] adjacency=yes; repeated spot=no; repeated edge=no; endpoints included=yes; effective price=yes; minimum score=yes; skills applied=yes.</reasoning>
+<response>哈巴雪山-小中甸花海-独克宗古城</response>
+
+# Output Format Constraints
+- The complete output must not exceed 4096 tokens.
+- Output exactly one nonempty `<reasoning>...</reasoning>` block followed immediately by one nonempty `<response>...</response>` block.
+- Do not output `<think>` tags, `<skill_retrieve>` tags, tool calls, Markdown fences, or any text outside the two required blocks.
+- Write the reasoning in English, while preserving every spot name exactly as it appears in the Vertex Table.
+- Inside `<response>`, output exactly one complete route and nothing else.
+- Join consecutive spots using hyphens `-` with no surrounding spaces.
+- Do not add transfer markers; Travelmap routes do not use metro-line transfer notation.

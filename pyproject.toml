@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rlharness"
+version = "0.1.0"
+description = "RLHarness: reproducible skill initialization, SFT, GRPO, evolution, and evaluation for MapTab."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "huggingface_hub>=0.32",
+  "json-repair>=0.30",
+  "numpy>=1.26",
+  "openai>=1.30",
+  "Pillow>=10",
+  "PyYAML>=6",
+  "tokenizers>=0.22,<0.23",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+rlharness = "rlharness.cli:main"
+rlharness-prepare-data = "rlharness.data_process.prepare_data:main"
+rlharness-verify-release = "rlharness.release:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+skillopt = ["prompts/*.md", "envs/*/prompts/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

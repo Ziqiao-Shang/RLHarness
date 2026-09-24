@@ -1,0 +1,78 @@
+# Role
+
+You are adapting the instructional demonstrations of a visual map-and-table route-planning prompt after its Skill Bank has been rewritten. Your job is to make the demonstrations faithfully teach the NEW skills without changing any task facts or correct answers.
+
+# New Skill Bank
+
+{new_skill_bank}
+
+# Skill Evolution Operation Log
+
+{operation_log}
+
+# Original How-to-Use Section
+
+{original_how_to_use}
+
+# Original Few-Shot Demonstrations
+
+{original_few_shots}
+
+# Required Rewrite
+
+Rewrite the How-to-Use section and the complete Few-Shot Demonstrations section so that they are internally consistent with the new Skill Bank.
+
+Use inline skill markers according to these rules:
+
+1. Preserve the existing `[Relevant Strategy Selection]` stage in every demonstration.
+2. In that stage, list only the NEW skills needed for the current demonstration, using their new numbers and titles with one concise reason each.
+3. At the exact point where a selected skill's Action begins, write `[Using Skill N]`, where `N` is that skill's number in the NEW Skill Bank.
+4. The text immediately following a marker must actually perform that skill's Action and respect its Guard and Check.
+5. Every selected skill must have exactly one corresponding `[Using Skill N]` marker later in that demonstration, and every used skill must have been selected.
+6. Do not select or mark an unused skill, repeat a marker, or explain why another skill was omitted.
+7. Never retain an old selection or marker mechanically. Map demonstrated behavior to the new skills by meaning, including skills created by merging old responsibilities.
+8. A demonstration does not need to use every skill. Truthful selection and placement are more important than coverage.
+9. Across all demonstrations, report which new skills receive a natural worked example and which remain unillustrated. Do not force an irrelevant skill into a demonstration merely to increase coverage.
+10. If a new skill contains actions from different solution stages that cannot truthfully follow one marker, report the inconsistency instead of fabricating a placement.
+
+# Preservation Constraints
+
+- Preserve every demonstration's task statement, weights, Vertex Table values, map-grounded facts, candidate routes, arithmetic results, selected route, and final `<response>` exactly in meaning.
+- Preserve the number and order of demonstrations.
+- Preserve the required `<reasoning>...</reasoning><response>...</response>` structure.
+- Preserve the existing Required Procedure; it is not part of the requested output and must not be redesigned.
+- Do not add any skill-selection stage beyond the existing `[Relevant Strategy Selection]` stage.
+- Do not change the authoritative scoring formula or output format.
+- Do not add location, waypoint, route-label, path, or numerical facts that are absent from the source demonstrations.
+- You may rewrite local reasoning sentences when necessary to make the new skill action explicit and executable.
+- If the source demonstrations appear internally inconsistent with the new Skill Bank or operation log, preserve their task facts but report the suspected inconsistency in the audit rather than silently inventing supporting behavior.
+
+# Output
+
+Return exactly one JSON object and no Markdown:
+
+{
+  "how_to_use": "rewritten How to Use the Skills body without its Markdown heading",
+  "few_shot_demonstrations": "complete rewritten Few-Shot Demonstrations body without its Markdown heading",
+  "marker_audit": [
+    {
+      "example_id": "example_1",
+      "used_skill_numbers": [1],
+      "placements": [
+        {
+          "skill_number": 1,
+          "following_action": "brief description of the action actually performed after the marker"
+        }
+      ]
+    }
+  ],
+  "demonstration_coverage": [
+    {
+      "skill_number": 1,
+      "illustrated_in_examples": ["example_1"],
+      "status": "NATURALLY_ILLUSTRATED|UNILLUSTRATED"
+    }
+  ],
+  "consistency_warnings": []
+}
+

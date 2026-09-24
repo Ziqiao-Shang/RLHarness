@@ -1,0 +1,21 @@
+artifacts/
+data/generated/
+data/raw/
+models/
+results/
+saves/
+*.log
+*.pid
+__pycache__/
+.pytest_cache/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Local credentials must never enter the release bundle.
+.env
+.env.*
+!.env.example
+*.pem
+*.key

@@ -1,0 +1,67 @@
+{
+  "domain": "travelmap",
+  "policy": "exclude_medium_hard_hard_medium_hard_hard",
+  "excluded_difficulties": [
+    "HardxHard",
+    "HardxMedium",
+    "MediumxHard"
+  ],
+  "exclude_start_transfer": false,
+  "excluded_known_bad_sample_ids": [
+    "travelmap:train:000636",
+    "travelmap:train:000645"
+  ],
+  "seed": 20260908,
+  "eligible_train_rows": 4238,
+  "eligible_test_rows": 1039,
+  "train_rows": 1600,
+  "validation_rows": 100,
+  "test_rows": 400,
+  "train_quotas": {
+    "EasyxEasy": 471,
+    "EasyxHard": 50,
+    "EasyxMedium": 325,
+    "HardxEasy": 73,
+    "MediumxEasy": 301,
+    "MediumxMedium": 380
+  },
+  "validation_quotas": {
+    "EasyxEasy": 29,
+    "EasyxHard": 3,
+    "EasyxMedium": 20,
+    "HardxEasy": 5,
+    "MediumxEasy": 19,
+    "MediumxMedium": 24
+  },
+  "test_quotas": {
+    "EasyxEasy": 110,
+    "EasyxHard": 16,
+    "EasyxMedium": 90,
+    "HardxEasy": 30,
+    "MediumxEasy": 76,
+    "MediumxMedium": 78
+  },
+  "split_unit": "figure",
+  "prompt_demonstration_sample_ids": [
+    "travelmap:train:003184",
+    "travelmap:train:005156"
+  ],
+  "reserved_train_figures": [
+    "travelmap/images/china/shanxi_shanxi2.png",
+    "travelmap/images/china/yunnan_xianggelila3.png"
+  ],
+  "train_figures": 87,
+  "validation_figures": 17,
+  "test_figures": 53,
+  "figure_overlap": {
+    "train_validation": 0,
+    "train_test": 0,
+    "validation_test": 0
+  },
+  "prompt_demonstration_rows_in_splits": 0,
+  "prompt_demonstration_figures_in_validation_or_test": 0,
+  "train_ids": 1600,
+  "train_validation_overlap": 0,
+  "train_test_overlap": 0,
+  "validation_test_overlap": 0
+}

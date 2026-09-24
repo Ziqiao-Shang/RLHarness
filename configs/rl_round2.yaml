@@ -1,0 +1,19 @@
+# Continuation settings after a candidate Skill Bank has been selected.
+_base_config: rl_round1.yaml
+
+data:
+  train_files: data/generated/rl_round2/train.jsonl
+  val_files: data/generated/rl_round2/validation.jsonl
+
+trainer:
+  total_epochs: 3
+  total_training_steps: 600
+  experiment_name: maptab_rl_round2
+  default_local_dir: artifacts/grpo_round2/checkpoints
+  rollout_data_dir: artifacts/grpo_round2/rollouts
+  validation_data_dir: artifacts/grpo_round2/validation
+  test_freq: 10
+  save_freq: 20
+  max_actor_ckpt_to_keep: null
+  resume_mode: resume_path
+  resume_from_path: artifacts/grpo_round1/checkpoints/global_step_400

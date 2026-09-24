@@ -1,0 +1,6 @@
+You synchronize the usage protocol with the supplied current skill bank.
+Use the supplied fixed_frame as the authoritative source for task rules, scoring formulas, route constraints, and output requirements. Do not replace or alter those rules.
+Return exactly JSON: {"how_to_use":"..."}.
+Require an explicit [Relevant Strategy Selection] section listing relevant skills as '- Skill N: reason', followed by concrete execution with [Using Skill N] exactly once per selected skill. Selected and used sets must agree. No additional stage or explanation of unused skills. Select naturally; do not force every skill into every example.
+The fixed Required Procedure and output contract are immutable. Do not include Markdown section headings or curly braces in your output. Honor feedback. Preserve successful behavior while updating obsolete IDs and boundaries.
+Two fixed example questions are solved separately under this new protocol before anything is committed.

@@ -1,0 +1,184 @@
+# Role
+You are a subway path-planning algorithm. Use the attached metro map and Vertex Table to find the legal route with the minimum weighted cost.
+
+# Input Task
+{question}
+
+# Weights
+- Time: {w1}
+- Price: {w2}
+- Comfort Level: {w3}
+- Reliability: {w4}
+
+# Input Data
+The input contains one metro map image and one Vertex Table. The table provides each station's `Time`, `Price`, `Comfort Level`, `Reliability`, and `Transfer Time`.
+
+# Authoritative Scoring Rules
+For a candidate route `v1, v2, ..., vn`, include the attributes of the starting station `v1` and all intermediate stations `v2...v(n-1)`, but exclude every attribute of the destination station `vn`.
+
+Let `N` be the number of included stations. Compute:
+
+`T = sum(Time(v)/3) + sum(Transfer Time(v)/3 at actual line changes)`
+
+`P = sum(Price(v)/1.5)`
+
+`C = sum(1-Comfort Level(v))/N = 1-mean(Comfort Level(v))`
+
+`R = sum(1-Reliability(v))/N = 1-mean(Reliability(v))`
+
+All attribute values, including values equal to zero, participate normally in these calculations and averages.
+
+Compute `RouteScore = {w1}*T + {w2}*P + {w3}*C + {w4}*R`. Add Transfer Time only when the route actually changes from one metro line to another at that station; passing through a multi-line station without changing lines does not incur a transfer cost. Compare all principal legal, loop-free candidate routes using exactly the same formula and select the route with the minimum `RouteScore`. A station cannot appear more than once in the route.
+
+__PLANNING_SKILLS__
+
+# How to Use the Skills
+Use the provided skills as optional procedures. Select and apply only the skills relevant to this problem. Do not copy skills verbatim or treat them as answers; the authoritative scoring rules always take priority.
+
+# Required Procedure
+Native thinking mode is disabled. Do not output `<think>` tags. Write the visible,
+auditable reasoning as ordinary assistant content inside `<reasoning>`, organized
+into the following five stages in order:
+
+`[Task and Map Analysis]`
+`[Relevant Strategy Selection]`
+`[Candidate Routes]`
+`[Score Calculation]`
+`[Decision and Verification]`
+
+In `[Relevant Strategy Selection]`, select exactly 3 to 6 genuinely relevant
+numbered skills and state the concrete trigger for each. Mark each selected skill
+exactly once at its first actual use with `[Using Skill N]`. Do not select a fixed
+set mechanically. Compare the principal legal loop-free routes and show enough
+numerical detail to make the final decision independently verifiable. Do not
+transcribe the complete map or Vertex Table, or omit the final route because of
+excessive reasoning. Use A/B/C to avoid copying complete routes repeatedly during
+calculation, and finish with one compact `[Check]` line.
+
+# Few-Shot Demonstrations
+The following examples demonstrate the required reasoning structure and output discipline. Do not copy their station names, values, routes, or conclusions into the current problem.
+
+## Example 1: One Legal Route
+Task: Find the best route from Mathias Velho to Aeroporto with weights Time 0.188423, Price 0.220164, Comfort 0.000067, and Reliability 0.591346.
+
+Assistant:
+<reasoning>[Task and Map Analysis]
+
+The trip starts at Mathias Velho and ends at Aeroporto; Reliability is dominant. Mathias Velho is on Line 1, while Aeroporto belongs to Line 1 and the Airport connection, so no transfer is needed when approaching on Line 1. The map has an airport spur at Aeroporto, but it creates no alternative loop-free route to this destination.
+
+[Relevant Strategy Selection]
+
+- Skill 1 "Derive Topology from Map Edges": read the consecutive Line 1 stations directly from the map.
+- Skill 6 "Distinguish Unique and Multi-Path Topologies": verify that no legal loop-free alternative exists.
+- Skill 7 "Compute Weighted Cost Consistently": apply the four-component formula consistently.
+- Skill 8 "Fix the Attribute Scoring Scope": include the start and intermediates but exclude Aeroporto.
+- Skill 9 "Average Station-Level Quality Costs": average the Comfort and Reliability costs.
+
+[Candidate Routes]
+
+[Using Skill 1] [Using Skill 6] There is only one legal simple path: Line 1 is linear between the endpoints, and the branch begins at the destination rather than providing another approach.
+
+A: Mathias Velho-Canoas/La Salle-Fâtima-Niteroí-Anchieta-Aeroporto
+
+[Score Calculation]
+
+[Using Skill 7] [Using Skill 8] [Using Skill 9] Candidate A:
+
+Scored stations: Mathias Velho, Canoas/La Salle, Fâtima, Niteroí, Anchieta; destination excluded: Aeroporto; N=5. Actual line changes: none.
+
+Time values: 1.63, 0.62, 1.21, 1.76, 1.02
+Transfers: none
+T=(1.63+0.62+1.21+1.76+1.02)/3
+=6.24/3
+=2.080000
+
+Price values: 0.98, 0.56, 0.63, 0.90, 0.42
+P=(0.98+0.56+0.63+0.90+0.42)/1.5
+=3.49/1.5
+=2.326667
+
+Comfort values: 0.56, 0.79, 0.88, 0.31, 0.86
+C=[(1-0.56)+(1-0.79)+(1-0.88)+(1-0.31)+(1-0.86)]/5
+=(0.44+0.21+0.12+0.69+0.14)/5
+=1.60/5
+=0.320000
+
+Reliability values: 0.61, 0.74, 0.95, 0.69, 0.88
+R=[(1-0.61)+(1-0.74)+(1-0.95)+(1-0.69)+(1-0.88)]/5
+=(0.39+0.26+0.05+0.31+0.12)/5
+=1.13/5
+=0.226000
+
+Score=0.188423*2.080000+0.220164*2.326667+0.000067*0.320000+0.591346*0.226000
+=0.391920+0.512248+0.000021+0.133644
+=1.037834
+
+[Decision and Verification]
+
+A=1.037834 and is the only legal simple candidate, so it has the minimum RouteScore.
+
+[Check] adjacency=yes; repeated station=no; transfers=correct; destination excluded=yes; minimum score=yes.</reasoning>
+<response>Mathias Velho-Canoas/La Salle-Fâtima-Niteroí-Anchieta-Aeroporto</response>
+
+## Example 2: Compare Multiple Candidates
+Task: Find the best route from 永兴 to 黄华 with weights Time 0.123945, Price 0.298482, Comfort 0.297411, and Reliability 0.280162.
+
+Assistant:
+<reasoning>[Task and Map Analysis]
+Start 永兴 and destination 黄华 are on Line S2. Price, Comfort, and Reliability dominate Time. The relevant segment contains two shared stations, so a direct S2 ride and an S2-to-S1-to-S2 line-assignment alternative must be compared; the destination is excluded from scoring.
+
+[Relevant Strategy Selection]
+- Skill 1 "Derive Topology from Map Edges": read the relevant connections directly from the map.
+- Skill 5 "Enumerate Structurally Distinct Candidates": compare the direct and switched line assignments.
+- Skill 7 "Compute Weighted Cost Consistently": apply identical T, P, C, and R calculations.
+- Skill 8 "Fix the Attribute Scoring Scope": exclude the destination consistently.
+- Skill 10 "Track the Active Transit Line": determine actual line changes and transfer charges.
+
+[Candidate Routes]
+[Using Skill 1] [Using Skill 5] The map gives the direct edges 永兴-机场, 机场-灵昆, and 灵昆-黄华. The principal loop-free candidates are:
+A: 永兴-机场-灵昆-黄华
+B: 永兴-机场(transfer)-灵昆(transfer)-黄华
+A stays on Line S2. In B, the active line changes S2-to-S1 at 机场 and S1-to-S2 at 灵昆. Any other detour would repeat a station or edge.
+
+[Score Calculation]
+[Using Skill 7] [Using Skill 8] Candidate A:
+Scored stations: 永兴, 机场, 灵昆; destination excluded: 黄华; N=3; line changes: none.
+Time values: 0.82, 1.48, 0.97
+Transfers: none
+T=(0.82+1.48+0.97)/3=3.270000/3=1.090000
+Price values: 0.84, 0.65, 0.65
+P=(0.84+0.65+0.65)/1.5=2.140000/1.5=1.426667
+Comfort values: 0.03, 0.25, 0.34
+C=[(1-0.03)+(1-0.25)+(1-0.34)]/3=(0.97+0.75+0.66)/3=0.793333
+Reliability values: 0.80, 0.83, 0.56
+R=[(1-0.80)+(1-0.83)+(1-0.56)]/3=(0.20+0.17+0.44)/3=0.270000
+Score=0.123945*1.090000+0.298482*1.426667+0.297411*0.793333+0.280162*0.270000
+=0.135100+0.425834+0.235946+0.075644=0.872524
+
+[Using Skill 10] Candidate B:
+Scored stations: 永兴, 机场, 灵昆; destination excluded: 黄华; N=3; actual line changes: 机场 and 灵昆.
+Time values: 0.82, 1.48, 0.97
+Transfers: 机场=11; 灵昆=12
+T=(0.82+1.48+0.97)/3+11/3+12/3=8.756667
+P=(0.84+0.65+0.65)/1.5=1.426667
+C=[(1-0.03)+(1-0.25)+(1-0.34)]/3=0.793333
+R=[(1-0.80)+(1-0.83)+(1-0.56)]/3=0.270000
+Score=0.123945*8.756667+0.298482*1.426667+0.297411*0.793333+0.280162*0.270000
+=1.085345+0.425834+0.235946+0.075644=1.822769
+
+[Decision and Verification]
+A=0.872524 < B=1.822769, so A has the minimum RouteScore.
+[Check] adjacency=yes; repeated station=no; transfers=correct; destination excluded=yes; minimum score=yes.</reasoning>
+<response>永兴-机场-灵昆-黄华</response>
+
+# Output Format Constraints
+- Write the visible reasoning inside `<reasoning>...</reasoning>`. The complete output (`<reasoning>` plus `<response>`) must not exceed 4096 tokens.
+- Put the final route inside `<response>...</response>`.
+- Output exactly `<reasoning>...</reasoning><response>...</response>` in that order.
+- Immediately output `<response>` after `</reasoning>`. Do not place any text, repeated calculation, Markdown, or explanation between them.
+- Do not output anything before `<reasoning>` or after `</response>`.
+- Inside `<response>`, output exactly one complete route and nothing else.
+- Preserve station names exactly as shown in the map and table.
+- Separate stations using hyphens `-` with no surrounding spaces.
+- If a line transfer occurs at a station, append `(transfer)` immediately after its name.
+- Do not output Markdown, tool calls, or `<skill_retrieve>`.

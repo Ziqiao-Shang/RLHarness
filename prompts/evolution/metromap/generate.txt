@@ -1,0 +1,99 @@
+# Role
+
+You are designing a compact Skill Bank for a visual subway-map route-planning task. Improve the CURRENT Skill Bank using the supplied rollout evidence. The result must be usable by a different student model, not merely describe the observed failures.
+
+# Current Skill Bank
+
+{skill_bank}
+
+# Reused Rollout Evidence
+
+{evidence}
+
+# Candidate Variant
+
+Name: {candidate_name}
+
+Design direction: {candidate_style}
+
+# Target Design Characteristics
+
+1. Write skills for normal forward reasoning. Do not create a standalone skill whose trigger assumes the student already knows it made an error.
+2. Convert useful recovery behavior into a guard or check activated by an observable high-risk state. High-risk states include crowded or bent track segments, overlapping labels, branches or loops, multiple plausible outgoing edges, long routes, several interchange choices, multi-line stations, close candidate scores, or route/scoring lists whose identities do not align.
+3. Organize the bank around a small number of normal planning stages: map-grounded route construction, preservation of structurally distinct candidates, active-line and transfer tracking, route-to-table alignment, authoritative scoring, and bounded final verification.
+4. Each skill must have exactly four operational fields: Trigger, Action, Guard, and Check. The trigger must be recognizable before or while carrying out the action.
+5. Merge overlapping responsibilities. Keep topology separate from table evidence. Keep route construction separate from scoring. Avoid duplicate scoring-scope and quality-average skills.
+6. Preserve successful behavior. Do not add broad geometric heuristics such as always moving toward the destination, preferring direct routes, or preferring fewer stations or transfers.
+7. Under complexity, prescribe a bounded local action rather than repeated global retracing. The student should inspect one uncertain local segment, preserve plausible branches until distinguished, or return once to the responsible stage.
+8. The resulting bank will be used with an explicit `[Relevant Strategy Selection]` stage and inline `[Using Skill N]` markers. Make every Trigger recognizable during selection and every Action concrete enough to execute immediately after its marker. Do not add any additional selection stage, ledger, exhaustive narration, or explanation of unused skills inside the Skill text itself.
+9. Do not include city-specific facts, station names, line names, training examples, or few-shot demonstrations in the generated skills.
+10. Let the number of skills follow the evidence and semantic coverage. Prefer a bank that is compact enough to use reliably, but do not target a numerical range and do not delete or merge an essential capability merely to make the bank shorter.
+11. A large textual rewrite is acceptable when semantic responsibility remains stable. A short sentence that introduces a broad default heuristic is not acceptable.
+12. Do not force the skills to be excessively concise. Express each skill naturally and completely enough to preserve its operational meaning, while avoiding irrelevant repetition.
+13. Never compress an executable condition or procedure into vague phrases such as "follow the prompt", "calculate correctly", "apply the rules", or "verify as needed". State the actual station scope, operation, boundary condition, or check that the student must perform.
+14. Account for every source skill. Each source skill's core responsibilities must either remain directly represented, be mapped to one or more rewritten or merged skills, or be explicitly deleted with repeated evidence that the responsibility is redundant or harmful. Low marker frequency alone is never sufficient deletion evidence.
+15. Before returning the candidate, perform a semantic coverage audit. Check that merging has not weakened route adjacency, transfer continuity, scoring scope, candidate completeness, numerical rechecking, final route completeness, or any other independently triggered protection present in the source bank.
+
+# One Structure Example
+
+This example demonstrates structure only. Do not copy its topic or wording:
+
+`N. Confirm an Uncertain Data Match`
+`Trigger: When two records remain plausible because their labels are visually similar.`
+`Action: Compare the smallest set of independent fields that distinguishes the records.`
+`Guard: Do not replace direct evidence with a naming guess.`
+`Check: Exactly one record is consistent with all distinguishing fields.`
+
+# Evidence Discipline
+
+- Treat repeated independent observations as stronger than a single failure.
+- Distinguish a demonstrated root cause from incidental wording in one trajectory.
+- Preserve the protections supported by successful trajectories.
+- Previously rejected edits are negative evidence. Do not regenerate the same broad semantic change under different wording.
+- Do not interpret the absence of a skill marker as proof that a capability is useless.
+- The current bank is deliberately pruned. Do not recreate removed low-value capabilities as standalone skills unless the supplied evidence establishes a distinct, necessary, reliably executable capability.
+
+# Operation and Coverage Consistency
+
+- Account for every source skill exactly once across all `operation_log.source_skill_numbers`. Never place the same source skill in a second operation.
+- `INSERT` has no source skill. `DELETE` has no result title. Every other operation names all result Skill titles it creates or directly maps to.
+- The coverage disposition must follow the operation mechanically: `KEEP -> PRESERVED`, `REWRITE -> REWRITTEN`, `MERGE -> MERGED`, and `DELETE -> DELETED`.
+- `covered_by_result_titles` must include every result title named by that source skill's operation. It may additionally include a genuinely relevant inserted Skill when that new Skill protects part of the source responsibility.
+- If two source skills require different dispositions, represent them with separate operation entries rather than bundling them under one operation.
+
+# Output
+
+Return exactly one JSON object and no Markdown:
+
+{
+  "candidate_name": "{candidate_name}",
+  "design_summary": "brief description of the organizing principle",
+  "skills": [
+    {
+      "title": "short action-oriented title",
+      "trigger": "observable condition",
+      "action": "bounded executable procedure",
+      "guard": "specific regression-prevention boundary",
+      "check": "concrete completion condition"
+    }
+  ],
+  "operation_log": [
+    {
+      "operation": "KEEP|REWRITE|MERGE|INSERT|DELETE",
+      "source_skill_numbers": [1],
+      "result_titles": ["title"],
+      "evidence": "which repeated evidence supports this semantic operation"
+    }
+  ],
+  "coverage_audit": [
+    {
+      "source_skill_number": 1,
+      "core_responsibilities": ["short responsibility"],
+      "disposition": "PRESERVED|MERGED|REWRITTEN|DELETED",
+      "covered_by_result_titles": ["title"],
+      "deletion_evidence": []
+    }
+  ],
+  "preserved_success_behaviors": ["behavior protected from regression"],
+  "rejected_overfitting_ideas": ["tempting but unsupported rule that was excluded"]
+}

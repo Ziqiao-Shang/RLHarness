@@ -1,0 +1,75 @@
+# Role
+
+You are a teacher performing Skill Distillation and Evolution for a visual map-and-table route-planning task. Analyze a mixed batch of successful and failed trajectories from an RL-trained student. Discover recurring, reusable reasoning patterns that transfer across scenic-area maps; do not patch individual examples.
+
+# Current Skill Bank
+
+{skill_bank}
+
+# Trajectory Batch
+
+{trajectories}
+
+# Analysis Tasks
+
+1. Identify successful strategies that recur across multiple trajectories and plausibly contributed to correct routes.
+2. Identify recurring, generalizable failure patterns and the earliest reasoning decision that tends to cause them.
+3. Evaluate relevant existing skills as valuable, too long, too abstract, overlapping, or ineffective in execution.
+4. Identify genuinely missing strategies only when repeated evidence supports them.
+5. Distinguish a weak skill from a one-off execution lapse. Do not add a rule for every failure.
+
+Pay particular attention to map-table grounding, complete waypoint-by-waypoint route construction, branches, loops, crossings, dead ends, candidate-set completeness, route-to-table identity alignment, scoring scope, arithmetic, canonical waypoint names, and final route verification. When relevant, inspect task-specific boundary rules such as endpoint inclusion, conditional attribute treatment, and nonzero-value averages. These are areas to inspect, not conclusions you must force.
+
+# Evidence Rules
+
+- A reusable finding should normally cite at least two trajectory IDs from this batch.
+- Preserve useful concise behavior found in successful trajectories.
+- Do not include location names, waypoint names, route labels, or sample-specific facts in a proposed strategy.
+- Do not modify the task definition, scoring formula, ground truth, or output format.
+- Do not propose a complete replacement Skill Bank in this stage.
+- Prefer concise cognitive heuristics over ledgers, exhaustive SOPs, or mandatory verbose reasoning.
+- Explicit `[Using Skill N]` tags are not evidence that a skill was used correctly. Infer usage from the reasoning behavior.
+
+# Output
+
+Return one JSON object and no Markdown:
+
+{
+  "successful_strategies": [
+    {
+      "pattern": "short reusable strategy",
+      "evidence_ids": ["id1", "id2"],
+      "related_skill_numbers": [1],
+      "why_it_helps": "brief causal explanation",
+      "confidence": "high|medium|low"
+    }
+  ],
+  "failure_patterns": [
+    {
+      "pattern": "short recurring failure",
+      "evidence_ids": ["id1", "id2"],
+      "earliest_error": "first harmful decision",
+      "related_skill_numbers": [1],
+      "repair_principle": "general repair, not a sample patch",
+      "confidence": "high|medium|low"
+    }
+  ],
+  "existing_skill_findings": [
+    {
+      "skill_numbers": [1, 2],
+      "assessment": "valuable|too_long|too_abstract|overlapping|weakly_executed",
+      "evidence_ids": ["id1", "id2"],
+      "recommendation": "KEEP|REWRITE|MERGE"
+    }
+  ],
+  "missing_strategies": [
+    {
+      "strategy": "short missing strategy",
+      "evidence_ids": ["id1", "id2"],
+      "why_existing_skills_are_insufficient": "brief explanation",
+      "confidence": "high|medium|low"
+    }
+  ],
+  "anti_patterns": ["behaviors that should not be turned into skills"]
+}
+

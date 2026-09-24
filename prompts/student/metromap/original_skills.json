@@ -1,0 +1,143 @@
+{
+  "schema_version": "structured-v1",
+  "skills": [
+    {
+      "skill_id": 1,
+      "category": "map_perception",
+      "title": "Derive Topology from Map Edges",
+      "when_to_apply": "When determining whether two stations are adjacent, reconstructing line topology, or building candidate routes.",
+      "procedure": "Determine station adjacency edge by edge strictly from the rail tracks drawn in the map image. The map topology frequently differs from real-world transit networks; strictly follow the visible map connections rather than external memory, city knowledge, or table row order. Trace the track continuously: include every station drawn along that traversed segment and never insert intermediate stations not directly connected on that segment.",
+      "check": "Every consecutive pair of stations in the route must be connected by a direct visible edge on the map image. Never skip a station drawn along the active path or insert an unverified intermediate station.",
+      "source_text": "When constructing a route, derive the topology from the actual rail connections and station adjacency shown on the map rather than from Vertex Table row order, shared line labels, visual proximity, or external memory. Verify that every consecutive pair of stations is connected by a direct map edge."
+    },
+    {
+      "skill_id": 2,
+      "category": "map_perception",
+      "title": "Expand Stations in the Travel Direction",
+      "when_to_apply": "When continuing along a line or expanding a path after transferring to another line, especially around branches, loops, endpoints, bends, or densely placed labels.",
+      "procedure": "Visually trace the drawn rail track station-by-station on the map image in the direction of travel. Metro lines in these maps often have rearranged, added, or skipped stations compared to real-world networks; never recall line orders from memory or assume standard geographic order. Record every station marker physically traversed on the track until reaching the transfer station or destination.",
+      "check": "The station sequence must strictly match the visual image track order. Do not skip intermediate stations drawn on the line, insert unvisited stations from real memory, or reverse travel order.",
+      "source_text": "When traveling along a line or a newly selected line after a transfer, expand the route station by station in the direction confirmed by the map and retain every intermediate station. For branches, loops, or dense labels, first reconstruct the ordered station sequence. Verify that the route is not reversed, does not skip stations, does not pass the destination and double back, and does not join the wrong branch."
+    },
+    {
+      "skill_id": 3,
+      "category": "table_alignment",
+      "title": "Normalize Station Names",
+      "when_to_apply": "When map labels and Vertex Table entries differ through aliases, abbreviations, bilingual labels, suffixes, romanization, or spelling.",
+      "procedure": "Use map position, adjacent stations, and line information to match each map node uniquely to its canonical Vertex Table entry. Use that canonical name consistently in the route and when reading attributes.",
+      "check": "Each route node must correspond to exactly one table entry. Do not split variants of one station into separate vertices, confuse similar station names, or attach attributes to the wrong station.",
+      "source_text": "When map labels contain aliases, abbreviations, bilingual forms, suffixes, or spelling differences, uniquely align each node with the canonical Vertex in the Vertex Table and use that canonical name throughout the route. Verify that similarly named stations are not confused, aliases are not split into separate vertices, and attributes are not mismatched."
+    },
+    {
+      "skill_id": 4,
+      "category": "table_alignment",
+      "title": "Separate Table Attributes from Map Adjacency",
+      "when_to_apply": "When reading station attributes, confirming line membership, or deciding whether a station can serve as a transfer point.",
+      "procedure": "Use the Vertex Table to verify a station's unique entry, line set, and attributes, and use the map to verify direct adjacency and travel order. For a transfer, confirm that both the incoming and outgoing lines are listed for the same station entry.",
+      "check": "A line field proves only line membership, not adjacency between two stations. Do not join disconnected map segments or transfer at a station that does not belong to both relevant lines.",
+      "source_text": "When reading station attributes or determining transfer eligibility, use the Vertex Table to verify the unique station entry, line membership, and attributes, and use the map to verify adjacency and order. Confirm that both lines before and after a transfer belong to the same station; a line field alone does not prove station adjacency."
+    },
+    {
+      "skill_id": 5,
+      "category": "candidate_routes",
+      "title": "Enumerate Structurally Distinct Candidates",
+      "when_to_apply": "When the map permits a direct route, different branches, opposite directions around a loop, or multiple transfer combinations between the start and destination.",
+      "procedure": "List the structurally distinct candidates supported by the map, including no-transfer routes and alternative interchange stations along intersecting lines. When lines intersect at multiple stations, evaluate each viable transfer point rather than defaulting to the first or most prominent one. Expand each candidate segment by segment into a complete sequence containing every traversed station.",
+      "check": "Do not retain only the route that appears shortest, has the fewest stations or transfers, or uses the first visible interchange. Every candidate must be supported by actual map connections.",
+      "source_text": "When the start and destination can be connected by a direct route, branches, loop directions, or multiple transfer combinations, first enumerate the structurally distinct candidates supported by the map and expand each into a complete station sequence. Ensure that the candidate set covers the no-transfer option and the main legal transfer options rather than choosing early based on directness, station count, or transfer count."
+    },
+    {
+      "skill_id": 6,
+      "category": "candidate_routes",
+      "title": "Distinguish Unique and Multi-Path Topologies",
+      "when_to_apply": "After the initial topology check, when deciding whether further search for alternative routes is necessary.",
+      "procedure": "Check the legal loop-free connections between the start and destination. If exactly one exists, retain and fully expand it. If more than one exists, continue enumerating all reachable line-connection sequences and legal transfer stations before scoring them consistently.",
+      "check": "Do not invent candidates through backtracking or weight-based speculation when only one legal path exists. When alternatives do exist, do not stop before enumerating and comparing them. A visual line crossing without a shared station is not a connection.",
+      "source_text": "If the topology check proves that only one legal loop-free path exists between the start and destination, retain that path and skip meaningless alternative search. Otherwise, enumerate all reachable line-connection sequences and transfer stations before applying consistent scoring."
+    },
+    {
+      "skill_id": 7,
+      "category": "scoring",
+      "title": "Compute Weighted Cost Consistently",
+      "when_to_apply": "When legal candidate routes are ready to be compared using the objective function in the question.",
+      "procedure": "For each candidate, sum Time/3 and Price/1.5 over the stations in its scoring set, and add Transfer Time/3 exactly once at each actual line-change station. Average the station-level values 1-Comfort and 1-Reliability separately across all scored stations, including zero-valued inputs. Then calculate the total cost as w1*T+w2*P+w3*C+w4*R.",
+      "check": "Use the same formula and scaling for every candidate. Do not use raw Time, Price, or Transfer Time, apply scaling twice, introduce a custom formula, or replace the calculation with heuristics such as shortest route or fewest transfers.",
+      "source_text": "Compute every legal candidate's total cost consistently: sum Time/3 and Price/1.5 over the start and all intermediate stations, add Transfer Time/3 only at actual line-change stations, average every station-level `1-Comfort` and `1-Reliability` value including zero-valued inputs, and calculate `w1*T+w2*P+w3*C+w4*R`. Verify that no raw values, incorrect scaling, or custom formula is used."
+    },
+    {
+      "skill_id": 8,
+      "category": "scoring",
+      "title": "Fix the Attribute Scoring Scope",
+      "when_to_apply": "When building the Time, Price, Comfort Level, and Reliability attribute list for a complete legal path.",
+      "procedure": "Starting from the first station in the path, include the start station and every intermediate station in the scoring set, exclude the destination, and read all four attributes from each station's unique Vertex Table entry.",
+      "check": "All four attributes must use the same path scope. Do not omit the start, a transfer station, or any other intermediate station, and do not include the destination, which is used only to verify arrival.",
+      "source_text": "When building a candidate path's scoring set, include the start and every intermediate station, exclude the destination, and read attributes from each station's unique Vertex entry. Verify that Time, Price, Comfort Level, and Reliability all use the same scope and that the destination is used only for arrival verification."
+    },
+    {
+      "skill_id": 9,
+      "category": "scoring",
+      "title": "Average Station-Level Quality Costs",
+      "when_to_apply": "When calculating Comfort Level or Reliability for a scoring set in which either metric may contain zero values.",
+      "procedure": "Process Comfort Level and Reliability separately. For every scored station, including one whose raw value is zero, compute `1-Comfort Level` or `1-Reliability`, then average each set of station-level costs by dividing by the total number of scored stations.",
+      "check": "A zero raw value contributes `1-0=1` and remains in the average. Do not include the destination, omit zero values, or sum the quality costs without dividing by the number of scored stations.",
+      "source_text": "For Comfort Level and Reliability, convert every scored station value, including zero, to `1-value` and average those station-level costs separately. Verify that the destination is excluded, zero values remain included, and both averages use the full scored-station count."
+    },
+    {
+      "skill_id": 10,
+      "category": "transfer",
+      "title": "Track the Active Transit Line",
+      "when_to_apply": "When a candidate route passes through a multi-line station or when determining whether adjacent travel segments involve a line change.",
+      "procedure": "Maintain the current station and active line while traversing the route. At each multi-line station, determine whether the next map edge continues on the active line or switches to another line listed for that station, then update the state accordingly.",
+      "check": "A transfer occurs only when the active line actually changes. Both the incoming and outgoing lines must belong to the station, and the subsequent map edges must be continuously explainable by the new line.",
+      "source_text": "Maintain a `station + active line` state along each candidate route. At every multi-line station, determine whether travel remains on the current line or switches to another available line. Count a transfer only when the active line changes, and verify both lines against the station's table entry and the outgoing map edges."
+    },
+    {
+      "skill_id": 11,
+      "category": "transfer",
+      "title": "Mark Each Actual Line Change Once",
+      "when_to_apply": "When adjacent travel segments have been confirmed to switch from line A to line B at a station.",
+      "procedure": "Append `(transfer)` only to the station where the line change occurs, and add that station's Transfer Time/3 exactly once.",
+      "check": "Do not mark or charge for same-line travel, initial boarding at the start, or passage through a multi-line station without changing lines. The number of transfer markers must equal the number of active-line changes, and a single change must never be charged twice.",
+      "source_text": "When adjacent travel segments switch from line A to line B at a station, append `(transfer)` only to that station and add its Transfer Time/3 once. Verify that same-line travel, initial boarding, and multi-line stations passed without changing lines are neither marked nor charged, and that the marker count equals the line-change count."
+    },
+    {
+      "skill_id": 12,
+      "category": "route_validity",
+      "title": "Validate Every Edge Before Scoring",
+      "when_to_apply": "Before any candidate route enters attribute aggregation and cost calculation.",
+      "procedure": "Check in order that the first station is the requested start, the last station is the requested destination, every consecutive edge exists on the map, each segment is continuously supported by the active line, every transfer occurs at a legal shared station, and no station repeats or forms a loop.",
+      "check": "Score only candidates that pass every condition. Reject any candidate with incorrect endpoints, a missing edge, a skipped station, an illegal cross-line jump, a repeated station, or a loop.",
+      "source_text": "Before scoring a candidate route, verify edge by edge that it starts and ends at the requested stations, every edge exists on the map and is continuously supported by the active line, transfers occur only at legal shared stations, and no station repeats or forms a loop."
+    },
+    {
+      "skill_id": 13,
+      "category": "route_validity",
+      "title": "Perform a Final Audit of the Best Candidate",
+      "when_to_apply": "After selecting the current lowest-cost candidate and before producing the final output.",
+      "procedure": "Audit the complete candidate again, checking the start and destination, every adjacency, line continuity, repeated stations, and agreement between each transfer marker and the actual active-line change.",
+      "check": "If any audit item fails, discard the candidate and rebuild or select another route rather than outputting it. The final candidate must be nonempty, reach the destination completely, and contain no skipped station, loop, or illegal transfer.",
+      "source_text": "After selecting the lowest-cost candidate, repeat a full legality audit covering endpoints, edge-by-edge adjacency, line continuity, absence of repeated stations, and transfer locations. If any item fails, discard and rebuild the route instead of continuing to compare or output it."
+    },
+    {
+      "skill_id": 14,
+      "category": "output_format",
+      "title": "Output the Complete Canonical Route",
+      "when_to_apply": "When the final legal route and its actual transfer locations have been determined.",
+      "procedure": "List the start, every intermediate station, and the destination in travel order using the canonical Vertex Table names, join them with hyphens, and append `(transfer)` only to stations where an actual line change occurs.",
+      "check": "The output must be nonempty and have the requested endpoints. Do not omit intermediate stations, add unverified stations, use inconsistent names, or place transfer markers that disagree with actual line changes.",
+      "source_text": "For the final output, list the start, every intermediate station, and the destination in travel order using canonical Vertex Table names, join them with hyphens, and append `(transfer)` only at actual line-change stations. Verify that the route is nonempty, has correct endpoints, omits no intermediate station, and includes no unverified station."
+    },
+    {
+      "skill_id": 15,
+      "category": "output_format",
+      "title": "Prioritize the Complete Route",
+      "when_to_apply": "When the route has been determined or the remaining output budget may not fit both the route and the full explanation.",
+      "procedure": "Always output `<reasoning>...</reasoning>` followed immediately by `<response>...</response>`. If output tokens must be conserved, shorten or condense the calculations inside `<reasoning>`, but never omit `<reasoning>` or output `<response>` alone.",
+      "check": "Every response must contain both `<reasoning>` and `<response>` blocks. Never return an empty answer, a missing `<reasoning>` block, a truncated station sequence, extra reasoning inside `<response>`, or an incomplete transfer marker.",
+      "source_text": "When the route has been determined or output space may be insufficient, preserve and submit the complete single-route string before compressing or omitting explanatory text. Never return an empty answer, a truncated sequence, extra reasoning text, or an incomplete transfer marker."
+    }
+  ],
+  "k": 15,
+  "domain": "metromap",
+  "source_skill_bank": "student/metromap/original.txt"
+}

@@ -1,0 +1,63 @@
+# Role
+You are a subway path-planning algorithm. Use the attached metro map and Vertex Table to find the legal route with the minimum weighted cost.
+
+# Input Task
+{question}
+
+# Weights
+- Time: {w1}
+- Price: {w2}
+- Comfort Level: {w3}
+- Reliability: {w4}
+
+# Input Data
+The input contains one metro map image and one Vertex Table. The table provides each station's `Time`, `Price`, `Comfort Level`, `Reliability`, and `Transfer Time`.
+
+# Authoritative Scoring Rules
+For a candidate route `v1, v2, ..., vn`, include the attributes of the starting station `v1` and all intermediate stations `v2...v(n-1)`, but exclude every attribute of the destination station `vn`.
+
+Let `N` be the number of included stations. Compute:
+
+`T = sum(Time(v)/3) + sum(Transfer Time(v)/3 at actual line changes)`
+
+`P = sum(Price(v)/1.5)`
+
+`C = sum(1-Comfort Level(v))/N = 1-mean(Comfort Level(v))`
+
+`R = sum(1-Reliability(v))/N = 1-mean(Reliability(v))`
+
+All attribute values, including values equal to zero, participate normally in these calculations and averages.
+
+Compute `RouteScore = {w1}*T + {w2}*P + {w3}*C + {w4}*R`. Add Transfer Time only when the route actually changes from one metro line to another at that station; passing through a multi-line station without changing lines does not incur a transfer cost. Compare all principal legal, loop-free candidate routes using exactly the same formula and select the route with the minimum `RouteScore`. A station cannot appear more than once in the route.
+
+# Planning Skills
+{initial_skills}
+
+# How to Use the Skills
+{initial_usage}
+
+# Required Procedure
+Inside `<reasoning>`, organize the reasoning into the following five stages in order:
+
+`[Task and Map Analysis]`
+`[Relevant Strategy Selection]`
+`[Candidate Routes]`
+`[Score Calculation]`
+`[Decision and Verification]`
+
+Select only the strategies relevant to the current instance. Compare the principal legal loop-free routes and show enough numerical detail to make the final decision independently verifiable. Do not mechanically enumerate irrelevant strategies, transcribe the complete map or Vertex Table, or omit the final route because of excessive reasoning. Use A/B/C to avoid copying complete routes repeatedly during calculation, and finish with one compact `[Check]` line.
+
+# Few-Shot Demonstrations
+{initial_examples}
+
+# Output Format Constraints
+- Reason step-by-step inside `<reasoning>...</reasoning>`. The complete output (`<reasoning>` plus `<response>`) must not exceed 4096 tokens.
+- Put the final route inside `<response>...</response>`.
+- Output exactly `<reasoning>...</reasoning><response>...</response>` in that order.
+- Immediately output `<response>` after `</reasoning>`. Do not place any text, repeated calculation, Markdown, or explanation between them.
+- Do not output anything before `<reasoning>` or after `</response>`.
+- Inside `<response>`, output exactly one complete route and nothing else.
+- Preserve station names exactly as shown in the map and table.
+- Separate stations using hyphens `-` with no surrounding spaces.
+- If a line transfer occurs at a station, append `(transfer)` immediately after its name.
+- Do not output Markdown, tool calls, or `<skill_retrieve>`.

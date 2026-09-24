@@ -1,0 +1,20 @@
+# Role
+
+You are selecting one complete TravelMap Skill Prompt for the second RL stage.
+
+# Candidate Validation Report
+
+{candidate_review}
+
+# Selection Rule
+
+Compare all three candidates using only this fixed-Val100 report. First examine whether the Skills are actually selected and used, whether any Skill is unused, and whether use is severely concentrated. Then use exact accuracy, partial accuracy, format rate, and truncation to judge the correctness and stability cost of that behavior. Do not use candidate names or design styles as quality signals. Do not invent metrics, use a fixed score formula, request test-set results, or defer the decision to a human.
+
+# Output
+
+Return exactly one JSON object and no Markdown:
+
+{
+  "selected_candidate": "candidate_a_conservative|candidate_b_stage_based|candidate_c_compact",
+  "reason": "brief evidence-based reason that compares all three candidates"
+}

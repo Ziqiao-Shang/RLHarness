@@ -1,0 +1,40 @@
+{
+  "policy": "exclude_medium_hard_hard_medium_hard_hard",
+  "excluded_difficulties": [
+    "HardxHard",
+    "HardxMedium",
+    "MediumxHard"
+  ],
+  "exclude_start_transfer": true,
+  "seed": 20260908,
+  "eligible_train_rows": 3842,
+  "eligible_test_rows": 940,
+  "train_rows": 1600,
+  "validation_rows": 100,
+  "test_rows": 400,
+  "train_quotas": {
+    "EasyxEasy": 455,
+    "EasyxHard": 97,
+    "EasyxMedium": 321,
+    "HardxEasy": 122,
+    "MediumxEasy": 292,
+    "MediumxMedium": 313
+  },
+  "validation_quotas": {
+    "EasyxEasy": 28,
+    "EasyxHard": 6,
+    "EasyxMedium": 20,
+    "HardxEasy": 8,
+    "MediumxEasy": 18,
+    "MediumxMedium": 20
+  },
+  "test_quotas": {
+    "EasyxEasy": 133,
+    "EasyxHard": 17,
+    "EasyxMedium": 74,
+    "HardxEasy": 29,
+    "MediumxEasy": 63,
+    "MediumxMedium": 84
+  },
+  "train_validation_overlap": 0
+}

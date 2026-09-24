@@ -1,0 +1,9 @@
+# Lightweight orchestration dependencies. SFT and GRPO/vLLM use separate GPU
+# environments; the verified version combinations are in docs/environment.md.
+huggingface_hub>=0.32
+json-repair>=0.30
+numpy>=1.26
+openai>=1.30
+Pillow>=10
+PyYAML>=6
+tokenizers>=0.22,<0.23

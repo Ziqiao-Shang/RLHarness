@@ -1,0 +1,214 @@
+# Round-one GRPO settings for both MapTab domains.
+# Domain launchers override paths, run names, and prompt transform versions.
+
+data:
+  train_files: data/generated/rl_round1/train.jsonl
+  val_files: data/generated/rl_round1/validation.jsonl
+  max_prompt_length: 24576
+  max_response_length: 4096
+  train_batch_size: 8
+  val_batch_size: 16
+  prompt_key: prompt
+  image_key: images
+  image_patch_size: 16
+  shuffle: true
+  validation_shuffle: false
+  seed: 42
+  use_shm: false
+  dataloader_num_workers: 16
+  filter_overlong_prompts: false
+  filter_overlong_prompts_workers: 16
+  truncation: error
+  prompt_transform_version: maptab_skill_reasoning_v1
+  apply_chat_template_kwargs:
+    enable_thinking: false
+  mm_processor_kwargs:
+    min_pixels: 3136
+    max_pixels: 1000000
+  custom_cls:
+    path: src/rlharness/rl/rl_dataset.py
+    name: MapTabRLHFDataset
+
+algorithm:
+  adv_estimator: maptab_hybrid_dgpo
+  adv_estimator_module: rlharness.rl.advantage
+  use_kl_in_reward: false
+  norm_adv_by_std_in_grpo: false
+  filter_groups:
+    enable: true
+    # Keep groups whenever the actual scalar reward varies, including groups
+    # with no exact success but different partial/format/length rewards.
+    metric: final_reward
+    max_num_gen_batches: 0
+    max_inflight_gen_batches: 1
+  hybrid_dgpo:
+    difficulty_temperature: 2.0
+    image_prior_strength: 0.0
+    enable_question_weighting: true
+
+actor_rollout_ref:
+  hybrid_engine: true
+  model:
+    # Merge the selected SFT LoRA into Qwen3.5-9B before RL so the frozen
+    # reference policy and the trainable policy start from the same SFT model.
+    path: artifacts/sft_merged
+    tokenizer_path: artifacts/sft_merged
+    lora_adapter_path: null
+    lora_rank: 16
+    lora_alpha: 32
+    trust_remote_code: true
+    use_shm: false
+    override_config:
+      attn_implementation: sdpa
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+      - in_proj_qkv
+      - in_proj_z
+      - in_proj_a
+      - in_proj_b
+      - out_proj
+    exclude_modules: ".*(visual|vision|projector|merger).*"
+    use_remove_padding: false
+    use_fused_kernels: true
+    fused_kernel_options:
+      impl_backend: torch
+    enable_gradient_checkpointing: true
+  actor:
+    strategy: fsdp2
+    # verl interprets this as prompts and multiplies it by rollout.n: 4*8=32
+    # trajectories per mini-batch, hence two optimizer updates per rollout step.
+    ppo_mini_batch_size: 4
+    ppo_epochs: 1
+    use_dynamic_bsz: true
+    ppo_max_token_len_per_gpu: 28672
+    clip_ratio_low: 0.2
+    clip_ratio_high: 0.2
+    clip_ratio_c: 3.0
+    loss_agg_mode: token-mean
+    use_kl_loss: true
+    kl_loss_coef: 0.001
+    kl_loss_type: low_var_kl
+    entropy_coeff: 0.0
+    calculate_entropy: false
+    use_torch_compile: false
+    freeze_vision_tower: true
+    optim:
+      lr: 5.0e-6
+      weight_decay: 0.01
+      lr_warmup_steps_ratio: 0.03
+      clip_grad: 1.0
+      lr_scheduler_type: constant
+    fsdp_config:
+      fsdp_size: 4
+      param_offload: false
+      optimizer_offload: false
+      reshard_after_forward: true
+      offload_policy: false
+    checkpoint:
+      save_contents:
+        - model
+        - optimizer
+        - extra
+      load_contents:
+        - model
+        - optimizer
+        - extra
+      save_lora_only: true
+  ref:
+    log_prob_use_dynamic_bsz: true
+    log_prob_max_token_len_per_gpu: 28672
+    use_torch_compile: false
+    fsdp_config:
+      param_offload: true
+  rollout:
+    name: vllm
+    mode: async
+    dtype: bfloat16
+    n: 8
+    response_length: 4096
+    temperature: 1.0
+    top_k: -1
+    top_p: 1.0
+    do_sample: true
+    tensor_model_parallel_size: 1
+    gpu_memory_utilization: 0.72
+    max_model_len: 28672
+    max_num_batched_tokens: 32768
+    max_num_seqs: 16
+    limit_images: null
+    enable_chunked_prefill: true
+    enable_prefix_caching: true
+    free_cache_engine: true
+    enable_sleep_mode: true
+    enforce_eager: false
+    load_format: safetensors
+    engine_kwargs:
+      vllm:
+        startup_stagger_seconds: 3
+        limit_mm_per_prompt:
+          image:
+            count: 1
+            width: 1000
+            height: 1000
+        mm_processor_cache_gb: 0
+        mm_processor_kwargs:
+          min_pixels: 3136
+          max_pixels: 1000000
+    log_prob_use_dynamic_bsz: true
+    log_prob_max_token_len_per_gpu: 28672
+
+reward:
+  num_workers: 16
+  custom_reward_function:
+    path: src/rlharness/rl/reward.py
+    name: compute_score
+    reward_kwargs:
+      format_weight: 0.05
+      part_acc_weight: 0.25
+      all_acc_weight: 0.70
+      station_match_threshold: 0.90
+      require_skill_retrieve: false
+      image_difficulty: 0.0
+  reward_kwargs:
+    max_resp_len: 4096
+    overlong_buffer_cfg:
+      enable: true
+      len: 512
+      penalty_factor: 0.1
+      log: true
+  reward_manager:
+    source: register
+    name: dapo
+
+trainer:
+  # 1600 prompts / batch size 8 = 200 steps per epoch. Train
+  # exactly two epochs to produce global_step_400.
+  total_epochs: 2
+  total_training_steps: 400
+  experiment_name: maptab_grpo_round1
+  logger:
+    - console
+  project_name: rlharness_maptab
+  n_gpus_per_node: 4
+  nnodes: 1
+  balance_batch: false
+  val_before_train: false
+  test_freq: 10
+  save_freq: 40
+  default_local_dir: artifacts/grpo_round1/checkpoints
+  rollout_data_dir: artifacts/grpo_round1/rollouts
+  validation_data_dir: artifacts/grpo_round1/validation
+  # Keep existing and newly created checkpoints for later comparison.
+  max_actor_ckpt_to_keep: null
+  resume_mode: auto
+  use_v1: true
+
+ray_kwargs:
+  ray_init:
+    num_cpus: null

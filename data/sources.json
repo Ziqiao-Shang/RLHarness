@@ -1,0 +1,18 @@
+{
+  "dataset": "MapTab",
+  "upstream_repository": {
+    "url": "https://github.com/Ziqiao-Shang/MapTab",
+    "revision": "1bc5e3d061c74ae87f2e83764e73db829d5e94b5"
+  },
+  "official_public_release": {
+    "url": "https://huggingface.co/datasets/szq-nju/MapTab",
+    "revision": "93bf27ae4387ff33f61d627063c77c9596e3e67c",
+    "scope": "test_only",
+    "note": "The current official release contains test assets only and is not byte-identical to the historical snapshot used by this repository."
+  },
+  "historical_reproduction": {
+    "status": "manual_source_required",
+    "default_external_root": "../maptab_data",
+    "note": "Provide a legally obtained historical MapTab snapshot. The preparation command imports the selected domain and validates its expected structure and split sizes."
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "schema_version": "structured-v1",
+  "skills": [
+    {
+      "skill_id": 1,
+      "category": "map_perception",
+      "title": "Derive Topology from Map Edges",
+      "when_to_apply": "When identifying adjacency, reconstructing the local graph, or building candidate routes.",
+      "procedure": "Determine connections edge by edge strictly from the continuous lines drawn in the map image. Travelmap graphs are undirected (bidirectional) networks of scenic routes; trace each drawn polyline from node endpoint to node endpoint rather than assuming spatial proximity, row order, or external geographic knowledge implies a connection.",
+      "check": "Every consecutive pair of spots must be connected by one direct visible line segment on the map without skipping intermediate labeled icons or inventing imaginary shortcuts between degree-1 leaf nodes.",
+      "source_text": "Derive Topology from Map Edges\nWhen to apply: When identifying adjacency, reconstructing the local graph, or building candidate routes.\nProcedure: Determine connections edge by edge strictly from the continuous lines drawn in the map image. Travelmap graphs are undirected (bidirectional) networks of scenic routes; trace each drawn polyline from node endpoint to node endpoint rather than assuming spatial proximity, row order, or external geographic knowledge implies a connection.\nCheck: Every consecutive pair of spots must be connected by one direct visible line segment on the map without skipping intermediate labeled icons or inventing imaginary shortcuts between degree-1 leaf nodes."
+    },
+    {
+      "skill_id": 2,
+      "category": "map_perception",
+      "title": "Expand Every Traversed Spot",
+      "when_to_apply": "When tracing a route through a chain, branch, intersection, bend, or visually dense region.",
+      "procedure": "Follow the chosen through-path continuously from spot to spot and record every labeled spot on that through-path, ensuring intermediate nodes situated along the line (e.g. transit stations, landmarks) are included. At each junction, distinguish trunk through-corridors from terminal side branches/dead ends (degree-1 leaf nodes connected only to that junction); never treat a leaf node as a through-bridge or insert a dead-end spur unless it is the designated start or destination.",
+      "check": "Do not skip a visible intermediate spot on the path, insert a dead-end spur that requires backtracking, reverse route order, or invent non-existent connections.",
+      "source_text": "Expand Every Traversed Spot\nWhen to apply: When tracing a route through a chain, branch, intersection, bend, or visually dense region.\nProcedure: Follow the chosen through-path continuously from spot to spot and record every labeled spot on that through-path, ensuring intermediate nodes situated along the line (e.g. transit stations, landmarks) are included. At each junction, distinguish trunk through-corridors from terminal side branches/dead ends (degree-1 leaf nodes connected only to that junction); never treat a leaf node as a through-bridge or insert a dead-end spur unless it is the designated start or destination.\nCheck: Do not skip a visible intermediate spot on the path, insert a dead-end spur that requires backtracking, reverse route order, or invent non-existent connections."
+    },
+    {
+      "skill_id": 3,
+      "category": "table_alignment",
+      "title": "Normalize Spot Names",
+      "when_to_apply": "When the map and Vertex Table use aliases, abbreviations, translations, punctuation, or similar-looking names.",
+      "procedure": "Use map position and neighboring spots to match each map node to exactly one canonical Vertex Table entry. Use that table name consistently in calculations and final output.",
+      "check": "Never attach one spot's attributes to another spot or treat two spellings of the same spot as separate vertices.",
+      "source_text": "Normalize Spot Names\nWhen to apply: When the map and Vertex Table use aliases, abbreviations, translations, punctuation, or similar-looking names.\nProcedure: Use map position and neighboring spots to match each map node to exactly one canonical Vertex Table entry. Use that table name consistently in calculations and final output.\nCheck: Never attach one spot's attributes to another spot or treat two spellings of the same spot as separate vertices."
+    },
+    {
+      "skill_id": 4,
+      "category": "table_alignment",
+      "title": "Separate Map Topology from Table Attributes",
+      "when_to_apply": "Whenever determining adjacency and retrieving numerical attributes.",
+      "procedure": "Use the map image only to establish direct connections and route order. Use the Vertex Table only to retrieve the four attributes after a spot has been identified.",
+      "check": "Table row order does not imply map adjacency, and numerical similarity does not create an edge.",
+      "source_text": "Separate Map Topology from Table Attributes\nWhen to apply: Whenever determining adjacency and retrieving numerical attributes.\nProcedure: Use the map image only to establish direct connections and route order. Use the Vertex Table only to retrieve the four attributes after a spot has been identified.\nCheck: Table row order does not imply map adjacency, and numerical similarity does not create an edge."
+    },
+    {
+      "skill_id": 5,
+      "category": "candidate_routes",
+      "title": "Enumerate Structurally Distinct Candidates",
+      "when_to_apply": "When branches, cycles, crossings, or multiple connecting corridors may provide different legal routes.",
+      "procedure": "Construct the principal structurally distinct loop-free candidates supported by visible edges. Include alternatives that could plausibly change the weighted decision, but omit routes that are merely long cyclic detours.",
+      "check": "Do not select the route solely because it has the fewest spots, looks most direct, or is the first route noticed.",
+      "source_text": "Enumerate Structurally Distinct Candidates\nWhen to apply: When branches, cycles, crossings, or multiple connecting corridors may provide different legal routes.\nProcedure: Construct the principal structurally distinct loop-free candidates supported by visible edges. Include alternatives that could plausibly change the weighted decision, but omit routes that are merely long cyclic detours.\nCheck: Do not select the route solely because it has the fewest spots, looks most direct, or is the first route noticed."
+    },
+    {
+      "skill_id": 6,
+      "category": "candidate_routes",
+      "title": "Distinguish Unique and Multi-Path Topologies",
+      "when_to_apply": "After the initial topology inspection and before numerical scoring.",
+      "procedure": "Determine whether exactly one legal simple route exists. If so, retain that route and state the concrete topological reason. If alternatives exist, compare the principal legal candidates.",
+      "check": "Do not invent alternatives for a unique path or declare a route unique before checking visible branches and reconnections.",
+      "source_text": "Distinguish Unique and Multi-Path Topologies\nWhen to apply: After the initial topology inspection and before numerical scoring.\nProcedure: Determine whether exactly one legal simple route exists. If so, retain that route and state the concrete topological reason. If alternatives exist, compare the principal legal candidates.\nCheck: Do not invent alternatives for a unique path or declare a route unique before checking visible branches and reconnections."
+    },
+    {
+      "skill_id": 7,
+      "category": "scoring",
+      "title": "Compute Weighted Cost Consistently",
+      "when_to_apply": "After the legal candidate routes have been fixed.",
+      "procedure": "For every candidate, compute `T`, `P`, `C`, and `R` to 6 decimal places with the authoritative formula. Show each individual weighted product term (`w_i * metric`) before summing them to obtain the final `RouteScore` (to 6 decimal places).",
+      "check": "Use identical scaling, precision, and attribute scope for every candidate. Do not replace the formula with an informal preference or shortest-route heuristic.",
+      "source_text": "Compute Weighted Cost Consistently\nWhen to apply: After the legal candidate routes have been fixed.\nProcedure: For every candidate, compute `T`, `P`, `C`, and `R` to 6 decimal places with the authoritative formula. Show each individual weighted product term (`w_i * metric`) before summing them to obtain the final `RouteScore` (to 6 decimal places).\nCheck: Use identical scaling, precision, and attribute scope for every candidate. Do not replace the formula with an informal preference or shortest-route heuristic."
+    },
+    {
+      "skill_id": 8,
+      "category": "scoring",
+      "title": "Include Both Route Endpoints",
+      "when_to_apply": "When building the attribute list for a candidate route.",
+      "procedure": "Include the start, every intermediate spot, and the destination in the Time, Price, Comfort Level, and Reliability calculations, subject only to the effective-price and nonzero-average rules.",
+      "check": "Do not omit either endpoint or use a different spot set for different attributes.",
+      "source_text": "Include Both Route Endpoints\nWhen to apply: When building the attribute list for a candidate route.\nProcedure: Include the start, every intermediate spot, and the destination in the Time, Price, Comfort Level, and Reliability calculations, subject only to the effective-price and nonzero-average rules.\nCheck: Do not omit either endpoint or use a different spot set for different attributes."
+    },
+    {
+      "skill_id": 9,
+      "category": "scoring",
+      "title": "Average Nonzero Quality Costs",
+      "when_to_apply": "When calculating Comfort Level and Reliability costs.",
+      "procedure": "Normalize each nonzero Comfort Level using `Comfort Level/5`, convert it to `1-Comfort Level/5`, and average those costs. Separately convert each nonzero Reliability value to `1-Reliability` and average those costs.",
+      "check": "Exclude an entry only when its original value for that same quality attribute is zero. Do not sum quality costs without dividing by the correct nonzero count.",
+      "source_text": "Average Nonzero Quality Costs\nWhen to apply: When calculating Comfort Level and Reliability costs.\nProcedure: Normalize each nonzero Comfort Level using `Comfort Level/5`, convert it to `1-Comfort Level/5`, and average those costs. Separately convert each nonzero Reliability value to `1-Reliability` and average those costs.\nCheck: Exclude an entry only when its original value for that same quality attribute is zero. Do not sum quality costs without dividing by the correct nonzero count."
+    },
+    {
+      "skill_id": 10,
+      "category": "scoring",
+      "title": "Apply the Zero-Time Effective-Price Rule",
+      "when_to_apply": "Whenever any route spot has `Time = 0`.",
+      "procedure": "Set Price to zero only when that zero-Time spot is not the destination. If the zero-Time spot is the destination, retain its original Price. Normalize the resulting effective prices by 200.",
+      "check": "Do not erase the destination's Price, retain an intermediate transport hub's Price, or omit its other nonzero attributes.",
+      "source_text": "Apply the Zero-Time Effective-Price Rule\nWhen to apply: Whenever any route spot has `Time = 0`.\nProcedure: Set Price to zero only when that zero-Time spot is not the destination. If the zero-Time spot is the destination, retain its original Price. Normalize the resulting effective prices by 200.\nCheck: Do not erase the destination's Price, retain an intermediate transport hub's Price, or omit its other nonzero attributes."
+    },
+    {
+      "skill_id": 11,
+      "category": "verification",
+      "title": "Recheck Close Candidate Scores",
+      "when_to_apply": "When two candidates have close totals, when different components favor different routes, or when one weight dominates the objective.",
+      "procedure": "Recompute the component sums, quality averages, effective prices, weighted products, and final addition for the competing candidates before deciding.",
+      "check": "A dominant weight guides attention but does not replace the complete weighted calculation. Every ranking claim must cite numerical scores.",
+      "source_text": "Recheck Close Candidate Scores\nWhen to apply: When two candidates have close totals, when different components favor different routes, or when one weight dominates the objective.\nProcedure: Recompute the component sums, quality averages, effective prices, weighted products, and final addition for the competing candidates before deciding.\nCheck: A dominant weight guides attention but does not replace the complete weighted calculation. Every ranking claim must cite numerical scores."
+    },
+    {
+      "skill_id": 12,
+      "category": "route_validity",
+      "title": "Validate Every Edge Before Scoring",
+      "when_to_apply": "Before admitting a candidate to numerical comparison.",
+      "procedure": "Verify the requested start and destination, each consecutive map edge, every intermediate spot, and the absence of repeated spots or edges.",
+      "check": "Reject candidates containing an invented edge, skipped spot, wrong endpoint, repeated spot, repeated edge, or loop.",
+      "source_text": "Validate Every Edge Before Scoring\nWhen to apply: Before admitting a candidate to numerical comparison.\nProcedure: Verify the requested start and destination, each consecutive map edge, every intermediate spot, and the absence of repeated spots or edges.\nCheck: Reject candidates containing an invented edge, skipped spot, wrong endpoint, repeated spot, repeated edge, or loop."
+    },
+    {
+      "skill_id": 13,
+      "category": "route_validity",
+      "title": "Perform a Final Audit of the Best Candidate",
+      "when_to_apply": "After identifying the current minimum-score candidate.",
+      "procedure": "Audit the complete route, its table lookups, effective-price decisions, averaging denominators, weighted score, and agreement between the reasoning and final route.",
+      "check": "If any item fails, correct the calculation or choose another validated candidate before answering.",
+      "source_text": "Perform a Final Audit of the Best Candidate\nWhen to apply: After identifying the current minimum-score candidate.\nProcedure: Audit the complete route, its table lookups, effective-price decisions, averaging denominators, weighted score, and agreement between the reasoning and final route.\nCheck: If any item fails, correct the calculation or choose another validated candidate before answering."
+    },
+    {
+      "skill_id": 14,
+      "category": "output_format",
+      "title": "Output the Complete Canonical Route",
+      "when_to_apply": "Once the best legal route has been established.",
+      "procedure": "Output the start, every intermediate spot, and the destination in travel order using canonical Vertex Table names joined by hyphens.",
+      "check": "Do not omit spots, translate names, add explanations inside the route, or place spaces around separators.",
+      "source_text": "Output the Complete Canonical Route\nWhen to apply: Once the best legal route has been established.\nProcedure: Output the start, every intermediate spot, and the destination in travel order using canonical Vertex Table names joined by hyphens.\nCheck: Do not omit spots, translate names, add explanations inside the route, or place spaces around separators."
+    },
+    {
+      "skill_id": 15,
+      "category": "output_format",
+      "title": "Prioritize a Complete Response",
+      "when_to_apply": "When the route is known or the remaining output budget is limited.",
+      "procedure": "Always finish one complete `<reasoning>...</reasoning>` block followed immediately by one complete `<response>...</response>` block. Compress secondary explanation before sacrificing the final route.",
+      "check": "Never return a truncated route, an empty block, a missing closing tag, or extra text outside the two required blocks.",
+      "source_text": "Prioritize a Complete Response\nWhen to apply: When the route is known or the remaining output budget is limited.\nProcedure: Always finish one complete `<reasoning>...</reasoning>` block followed immediately by one complete `<response>...</response>` block. Compress secondary explanation before sacrificing the final route.\nCheck: Never return a truncated route, an empty block, a missing closing tag, or extra text outside the two required blocks."
+    }
+  ],
+  "k": 15,
+  "domain": "travelmap",
+  "source_skill_bank": "student/travelmap/original.txt"
+}

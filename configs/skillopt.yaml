@@ -1,0 +1,39 @@
+# SkillOpt settings shared by MetroMap and TravelMap.
+# Model IDs are provider routing names; override through the launcher.
+model:
+  backend: azure_openai
+  optimizer: gpt-5.6-sol
+  target: gemini-3.5-flash
+  optimizer_backend: openai_chat
+  target_backend: openai_chat
+  azure_openai_auth_mode: openai_compatible
+  reasoning_effort: medium
+train:
+  num_epochs: 1
+  max_train_steps: 12
+  batch_size: 40
+  accumulation: 1
+  seed: 42
+gradient:
+  minibatch_size: 8
+  merge_batch_size: 8
+  analyst_workers: 8
+  failure_only: false
+optimizer:
+  learning_rate: 2
+  min_learning_rate: 1
+  lr_scheduler: cosine
+  lr_control_mode: fixed
+  skill_update_mode: patch
+  use_slow_update: false
+  use_meta_skill: false
+evaluation:
+  use_gate: true
+  gate_metric: hard
+  sel_env_num: 100
+  eval_test: false
+env:
+  rollout_workers: 8
+  rollout_max_tokens: 4096
+  rollout_timeout: 300
+  rollout_retries: 2

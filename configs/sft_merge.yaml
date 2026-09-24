@@ -1,0 +1,11 @@
+# LoRA merge settings shared by MetroMap and TravelMap.
+model_name_or_path: models/Qwen3.5-9B
+adapter_name_or_path: artifacts/sft/checkpoint-350
+trust_remote_code: true
+template: qwen3_5
+finetuning_type: lora
+
+export_dir: artifacts/sft_merged
+export_size: 5
+export_device: cpu
+export_legacy_format: false

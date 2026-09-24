@@ -1,0 +1,212 @@
+# Role
+You are a subway path-planning algorithm. Use the attached metro map and Vertex Table to find the legal route with the minimum weighted cost.
+
+# Input Task
+{question}
+
+# Weights
+- Time: {w1}
+- Price: {w2}
+- Comfort Level: {w3}
+- Reliability: {w4}
+
+# Input Data
+The input contains one metro map image and one Vertex Table. The table provides each station's `Time`, `Price`, `Comfort Level`, `Reliability`, and `Transfer Time`.
+
+# Authoritative Scoring Rules
+For a candidate route `v1, v2, ..., vn`, include the attributes of the starting station `v1` and all intermediate stations `v2...v(n-1)`, but exclude every attribute of the destination station `vn`.
+
+Let `N` be the number of included stations. Compute:
+
+`T = sum(Time(v)/3) + sum(Transfer Time(v)/3 at actual line changes)`
+
+`P = sum(Price(v)/1.5)`
+
+`C = sum(1-Comfort Level(v))/N = 1-mean(Comfort Level(v))`
+
+`R = sum(1-Reliability(v))/N = 1-mean(Reliability(v))`
+
+All attribute values, including values equal to zero, participate normally in these calculations and averages.
+
+Compute `RouteScore = {w1}*T + {w2}*P + {w3}*C + {w4}*R`. Add Transfer Time only when the route actually changes from one metro line to another at that station; passing through a multi-line station without changing lines does not incur a transfer cost. Compare all principal legal, loop-free candidate routes using exactly the same formula and select the route with the minimum `RouteScore`. A station cannot appear more than once in the route.
+
+# Planning Skills
+
+1. Build a Map-Grounded Route Sequence
+   Trigger: When constructing or extending any route segment between the start, an interchange, and the destination.
+   Action: Follow the visible rail track on the map from one station marker to the next and record the stations in travel order. Use the Vertex Table only to copy canonical station names and line memberships; do not infer adjacency from table order, shared line membership, geographic intuition, or knowledge of the real network.
+   Guard: If a proposed consecutive pair is visually uncertain, inspect only that local segment once. Insert any station marker visibly traversed between the pair, or remove the edge if no continuous track connects it.
+   Check: Every consecutive pair is connected by one visible map edge, every traversed intermediate station is present, and no station is invented, reversed, or repeated.
+
+2. Preserve the Relevant Candidate Set
+   Trigger: After at least one legal route has been constructed and before any route is selected by cost.
+   Action: Determine whether the map supports another loop-free route through a distinct branch direction, loop direction, or interchange sequence. Preserve each such structurally distinct route and expand it completely with Skill 1. If the visible topology supports exactly one loop-free route, keep that route alone.
+   Guard: Do not add a candidate merely because it is imaginable, and do not discard one because it initially moves away from the destination, has more stations, or uses more transfers.
+   Check: Every retained candidate is map-supported and loop-free; no structurally distinct legal candidate was removed before scoring, and no artificial alternative was added.
+
+3. Track Line State and Transfers
+   Trigger: When a route enters a station served by multiple lines or when two consecutive route segments may use different lines.
+   Action: Track the active line on the incoming and outgoing visible edges. Mark `(transfer)` and add that station's Transfer Time/3 exactly once only when the active line changes there.
+   Guard: A shared station, map crossing, initial boarding, or passage through a multi-line station does not by itself constitute a transfer.
+   Check: Both lines serve the transfer station, the outgoing route continues on the new line, and the number of transfer markers equals the number of charged line changes.
+
+4. Align Route Stations with Scoring Rows
+   Trigger: Before reading station attributes for a complete candidate route.
+   Action: Form one ordered scoring set containing the start and every intermediate station while excluding the destination. Match every scored station to exactly one canonical Vertex Table row, and use this same set for Time, Price, Comfort Level, and Reliability.
+   Guard: If any attribute list has a different length or station identity, realign the rows to the route before calculating; do not patch only one metric.
+   Check: All four attribute lists contain the same N non-destination route stations, including zero-valued rows and all transfer stations.
+
+5. Compute and Compare the Authoritative Objective
+   Trigger: After all legal candidates and their aligned scoring rows are ready.
+   Action: For every candidate, compute Time/3 and Price/1.5 sums, add Transfer Time/3 for each verified line change, average `1-Comfort Level` and `1-Reliability` over the same N scored stations, and then calculate `w1*T+w2*P+w3*C+w4*R`. Select the candidate with the lowest numerical score.
+   Guard: Apply exactly the same formula, precision policy, and scoring scope to every candidate; never substitute route length, apparent directness, or transfer count for the weighted comparison.
+   Check: The displayed component sums reproduce the final score, zero values remain included, and the selected score is no greater than every compared candidate score.
+
+6. Verify the Settled Answer
+   Trigger: After selecting the minimum-score candidate and before emitting the final response.
+   Action: Check the settled route once against the outputs of Skills 1-5: endpoints and station order, visible adjacency, no repeated station, transfer placement and charge, scoring scope, arithmetic, and required response syntax. If one check fails, return only to the responsible skill, correct that item once, and then finish the answer without narrating discarded drafts.
+   Guard: Verification must not create a new route heuristic, reopen a passed stage without evidence, or expand into repeated full-route retracing.
+   Check: The final `<response>` contains exactly the selected complete hyphen-separated route, with canonical station names and transfer markers, and the reasoning closes within the token limit.
+# How to Use the Skills
+Use Skills 1-5 in their normal planning stages when their triggers are present, and use Skill 6 once for final verification. The authoritative task and scoring rules always take priority.
+
+In `[Relevant Strategy Selection]`, name only the skills needed for the current instance in one concise line. At the point where a selected skill first performs its Action, mark it once with `[Using Skill N]`. Do not mark a skill merely because its description is relevant, do not repeat a marker, and do not discuss unused skills.
+
+Treat each Guard as a local intervention inside its owning skill, not as a standalone recovery procedure. When a check fails, correct only the responsible stage once and continue with the settled reasoning.
+# Required Procedure
+Inside `<reasoning>`, organize the reasoning into the following five stages in order:
+
+`[Task and Map Analysis]`
+`[Relevant Strategy Selection]`
+`[Candidate Routes]`
+`[Score Calculation]`
+`[Decision and Verification]`
+
+Select only the strategies relevant to the current instance. Compare the principal legal loop-free routes and show enough numerical detail to make the final decision independently verifiable. Do not mechanically enumerate irrelevant strategies, transcribe the complete map or Vertex Table, or omit the final route because of excessive reasoning. Use A/B/C to avoid copying complete routes repeatedly during calculation, and finish with one compact `[Check]` line.
+
+# Few-Shot Demonstrations
+The following examples demonstrate the required reasoning structure and output discipline. Do not copy their station names, values, routes, or conclusions into the current problem.
+
+## Example 1: One Legal Route
+Task: Find the best route from Phra Nangklao Bridge to Bang Rak Yai with weights Time 0.115774, Price 0.136701, Comfort 0.687883, and Reliability 0.059642.
+
+Assistant:
+<reasoning>[Task and Map Analysis]
+The trip starts at Phra Nangklao Bridge and ends at Bang Rak Yai on the MRT Purple Line, with Comfort Level being the dominant factor (weight 0.687883). The MRT Purple Line is a linear track segment between these two stations with no loops, branches, or parallel line alternatives connecting them. Therefore, exactly one legal loop-free candidate route exists.
+
+[Relevant Strategy Selection]
+- Skill 1 "Build a Map-Grounded Route Sequence": trace the complete station sequence directly from visible map edges.
+- Skill 2 "Preserve the Relevant Candidate Set": confirm that the visible topology supports exactly one loop-free route.
+- Skill 4 "Align Route Stations with Scoring Rows": include the start and intermediate stations while excluding Bang Rak Yai.
+- Skill 5 "Compute and Compare the Authoritative Objective": calculate the prescribed scaled and weighted objective.
+- Skill 6 "Verify the Settled Answer": check the selected route, calculations, and final syntax once before responding.
+
+[Candidate Routes]
+[Using Skill 1] [Using Skill 2] Tracing the Purple Line north-westward from Phra Nangklao Bridge to Bang Rak Yai reveals a single direct, loop-free path:
+
+A: Phra Nangklao Bridge-Sai Ma-Bang Rak Noi Tha It-Bang Rak Yai
+
+[Score Calculation]
+[Using Skill 4] [Using Skill 5] Candidate A:
+Scored stations: Phra Nangklao Bridge, Sai Ma, Bang Rak Noi Tha It; destination excluded: Bang Rak Yai; N=3; transfers: none.
+
+Time values: 0.87, 1.11, 0.70
+T=(0.87+1.11+0.70)/3=2.680000/3=0.893333
+
+Price values: 0.52, 0.44, 0.48
+P=(0.52+0.44+0.48)/1.5=1.440000/1.5=0.960000
+
+Comfort values: 0.27, 1.00, 0.95
+C=[(1-0.27)+(1-1.00)+(1-0.95)]/3=(0.73+0.00+0.05)/3=0.780000/3=0.260000
+
+Reliability values: 0.99, 0.53, 0.88
+R=[(1-0.99)+(1-0.53)+(1-0.88)]/3=(0.01+0.47+0.12)/3=0.600000/3=0.200000
+
+Score=0.115774*0.893333+0.136701*0.960000+0.687883*0.260000+0.059642*0.200000
+=0.103431+0.131233+0.178850+0.011928=0.425442
+
+[Decision and Verification]
+Candidate A is the unique legal loop-free route with RouteScore = 0.425442, automatically achieving the minimum score.
+
+[Using Skill 6] [Check] adjacency=yes; repeated station=no; transfers=correct; destination excluded=yes; minimum score=yes; skills applied=yes.</reasoning>
+<response>Phra Nangklao Bridge-Sai Ma-Bang Rak Noi Tha It-Bang Rak Yai</response>
+
+## Example 2: Compare Multiple Candidates
+Task: Find the best route from Nørrebro to Ørestad with weights Time 0.367266, Price 0.258649, Comfort 0.028032, and Reliability 0.346053.
+
+Assistant:
+<reasoning>[Task and Map Analysis]
+The trip starts at Nørrebro (M3/M4) and ends at Ørestad (M1), with destination excluded from scoring. Time (0.367266), Reliability (0.346053), and Price (0.258649) dominate the weighted cost. Transfer from the M3 loop to M1 can occur either via the western arc at Frederiksberg or via the eastern arc at Kongens Nytorv, yielding two principal competitive loop-free candidates.
+
+[Relevant Strategy Selection]
+- Skill 1 "Build a Map-Grounded Route Sequence": reconstruct both complete routes directly from visible map edges.
+- Skill 2 "Preserve the Relevant Candidate Set": retain both structurally distinct loop directions before scoring.
+- Skill 3 "Track Line State and Transfers": verify each active-line change and mark its interchange once.
+- Skill 4 "Align Route Stations with Scoring Rows": include the start and intermediate stations while excluding Ørestad.
+- Skill 5 "Compute and Compare the Authoritative Objective": calculate and compare T, P, C, R, and RouteScore consistently.
+- Skill 6 "Verify the Settled Answer": check the winning route, transfer, arithmetic, and final syntax once.
+
+[Candidate Routes]
+[Using Skill 1] [Using Skill 2] [Using Skill 3]
+A: Nørrebro-Nørrebros Runddel-Nuuks Plads-Aksel Møllers Have-Frederiksberg(transfer)-Forum-Nørreport-Kongens Nytorv-Christianshavn-IslandsBrygge-DR Byen-Sundby-Bella Center-Ørestad
+B: Nørrebro-Skjolds Plads-Vibenshus Runddel-Poul Henningsens Plads-Trianglen-Østerport-Marmorkirken-Kongens Nytorv(transfer)-Christianshavn-IslandsBrygge-DR Byen-Sundby-Bella Center-Ørestad
+
+[Score Calculation]
+[Using Skill 4] [Using Skill 5]
+Candidate A:
+Scored stations: Nørrebro, Nørrebros Runddel, Nuuks Plads, Aksel Møllers Have, Frederiksberg, Forum, Nørreport, Kongens Nytorv, Christianshavn, IslandsBrygge, DR Byen, Sundby, Bella Center; destination excluded: Ørestad; N=13; transfers: Frederiksberg (14).
+Time values: 1.08, 1.16, 1.39, 0.79, 1.13, 1.05, 1.91, 1.62, 0.88, 1.76, 0.63, 1.01, 1.87
+Transfer Time: Frederiksberg = 14
+Sum Time + Transfer = 16.28 + 14 = 30.28
+T = 30.28 / 3 = 10.093333
+Price values: 0.72, 0.96, 1.25, 0.86, 0.67, 0.92, 0.79, 0.71, 0.87, 0.47, 0.14, 0.37, 0.64
+Sum Price = 9.37
+P = 9.37 / 1.5 = 6.246667
+Comfort values: 0.71, 0.20, 0.97, 0.33, 0.73, 0.98, 0.68, 0.68, 0.21, 0.62, 0.58, 0.94, 0.78
+1 - Comfort: 0.29, 0.80, 0.03, 0.67, 0.27, 0.02, 0.32, 0.32, 0.79, 0.38, 0.42, 0.06, 0.22
+Sum (1 - Comfort) = 4.59
+C = 4.59 / 13 = 0.353077
+Reliability values: 0.60, 0.77, 0.94, 0.68, 0.69, 0.81, 0.61, 0.55, 0.78, 0.99, 0.84, 0.67, 0.71
+1 - Reliability: 0.40, 0.23, 0.06, 0.32, 0.31, 0.19, 0.39, 0.45, 0.22, 0.01, 0.16, 0.33, 0.29
+Sum (1 - Reliability) = 3.36
+R = 3.36 / 13 = 0.258462
+Score A = 0.367266 * 10.093333 + 0.258649 * 6.246667 + 0.028032 * 0.353077 + 0.346053 * 0.258462
+= 3.706948 + 1.615694 + 0.009897 + 0.089441 = 5.421980
+
+Candidate B:
+Scored stations: Nørrebro, Skjolds Plads, Vibenshus Runddel, Poul Henningsens Plads, Trianglen, Østerport, Marmorkirken, Kongens Nytorv, Christianshavn, IslandsBrygge, DR Byen, Sundby, Bella Center; destination excluded: Ørestad; N=13; transfers: Kongens Nytorv (12).
+Time values: 1.08, 0.66, 1.58, 1.99, 0.82, 1.73, 0.54, 1.62, 0.88, 1.76, 0.63, 1.01, 1.87
+Transfer Time: Kongens Nytorv = 12
+Sum Time + Transfer = 16.17 + 12 = 28.17
+T = 28.17 / 3 = 9.390000
+Price values: 0.72, 0.85, 1.20, 1.00, 0.54, 0.44, 0.20, 0.71, 0.87, 0.47, 0.14, 0.37, 0.64
+Sum Price = 8.15
+P = 8.15 / 1.5 = 5.433333
+Comfort values: 0.71, 0.14, 0.52, 0.17, 0.69, 0.93, 0.41, 0.68, 0.21, 0.62, 0.58, 0.94, 0.78
+1 - Comfort: 0.29, 0.86, 0.48, 0.83, 0.31, 0.07, 0.59, 0.32, 0.79, 0.38, 0.42, 0.06, 0.22
+Sum (1 - Comfort) = 5.62
+C = 5.62 / 13 = 0.432308
+Reliability values: 0.60, 0.87, 0.91, 0.56, 0.80, 0.89, 0.57, 0.55, 0.78, 0.99, 0.84, 0.67, 0.71
+1 - Reliability: 0.40, 0.13, 0.09, 0.44, 0.20, 0.11, 0.43, 0.45, 0.22, 0.01, 0.16, 0.33, 0.29
+Sum (1 - Reliability) = 3.26
+R = 3.26 / 13 = 0.250769
+Score B = 0.367266 * 9.390000 + 0.258649 * 5.433333 + 0.028032 * 0.432308 + 0.346053 * 0.250769
+= 3.448628 + 1.405326 + 0.012118 + 0.086779 = 4.952851
+
+[Decision and Verification]
+Comparing the candidate scores: Candidate B (4.952851) achieves a significantly lower score than Candidate A (5.421980) due to lower overall time, lower transfer cost at Kongens Nytorv, and lower ticket prices along the eastern arc.
+
+[Using Skill 6] [Check] adjacency=yes; repeated station=no; transfers=correct; destination excluded=yes; minimum score=yes; skills applied=yes.</reasoning>
+<response>Nørrebro-Skjolds Plads-Vibenshus Runddel-Poul Henningsens Plads-Trianglen-Østerport-Marmorkirken-Kongens Nytorv(transfer)-Christianshavn-IslandsBrygge-DR Byen-Sundby-Bella Center-Ørestad</response>
+
+# Output Format Constraints
+- Reason step-by-step inside `<reasoning>...</reasoning>`. The complete output (`<reasoning>` plus `<response>`) must not exceed 4096 tokens.
+- Put the final route inside `<response>...</response>`.
+- Output exactly `<reasoning>...</reasoning><response>...</response>` in that order.
+- Immediately output `<response>` after `</reasoning>`. Do not place any text, repeated calculation, Markdown, or explanation between them.
+- Do not output anything before `<reasoning>` or after `</response>`.
+- Inside `<response>`, output exactly one complete route and nothing else.
+- Preserve station names exactly as shown in the map and table.
+- Separate stations using hyphens `-` with no surrounding spaces.
+- If a line transfer occurs at a station, append `(transfer)` immediately after its name.
+- Do not output Markdown, tool calls, or `<skill_retrieve>`.
