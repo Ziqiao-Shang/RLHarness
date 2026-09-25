@@ -295,3 +295,5 @@ The release check validates fixed splits, configuration inheritance, required pr
 ## Data Sources
 
 MapTab data comes from the [official MapTab repository](https://github.com/Ziqiao-Shang/MapTab) and the [MapTab Hugging Face dataset](https://huggingface.co/datasets/szq-nju/MapTab). Follow the original project's license and usage terms.
+
+> **Dataset availability:** Fee-VL and Cancel-VL are not yet publicly available because parts of these datasets may involve user privacy. They are currently undergoing privacy review, and we look forward to sharing them once the review is complete.
