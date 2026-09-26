@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import math
 import os
@@ -87,6 +88,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--table-max-chars", type=int, default=20_000)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.75)
+    parser.add_argument(
+        "--backend",
+        choices=("auto", "vllm", "transformers"),
+        default=os.environ.get("RLHARNESS_EVAL_BACKEND", "auto"),
+        help=(
+            "Generation backend. For Qwen3.5, auto uses native vLLM when the "
+            "installed version is at least 0.26 and direct Transformers otherwise."
+        ),
+    )
+    parser.add_argument(
+        "--model-impl",
+        choices=("auto", "vllm", "transformers"),
+        default=os.environ.get("RLHARNESS_VLLM_MODEL_IMPL", "auto"),
+        help="Implementation override passed to vLLM when --backend=vllm.",
+    )
     parser.add_argument("--resume", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-mm-profiling", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--enforce-eager", action="store_true")
@@ -113,6 +129,44 @@ def validate_args(args: argparse.Namespace) -> None:
         raise SystemExit("--max-model-len must be larger than --max-new-tokens.")
     if not 0.0 < args.gpu_memory_utilization < 1.0:
         raise SystemExit("--gpu-memory-utilization must be between 0 and 1.")
+
+
+def _read_model_config(model_path: Path) -> dict[str, Any]:
+    config_path = model_path / "config.json"
+    if not config_path.is_file():
+        return {}
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return config if isinstance(config, dict) else {}
+
+
+def is_qwen35_model(model_path: Path) -> bool:
+    config = _read_model_config(model_path)
+    architectures = config.get("architectures") or []
+    if isinstance(architectures, str):
+        architectures = [architectures]
+    return config.get("model_type") == "qwen3_5" or any(
+        str(name).startswith("Qwen3_5") for name in architectures
+    )
+
+
+def resolve_eval_backend(model_path: Path, requested: str) -> str:
+    if requested != "auto":
+        return requested
+    if not is_qwen35_model(model_path):
+        return "vllm"
+    try:
+        raw_version = importlib.metadata.version("vllm")
+    except importlib.metadata.PackageNotFoundError:
+        return "transformers"
+    parts = []
+    for value in raw_version.split(".")[:3]:
+        digits = "".join(character for character in value if character.isdigit())
+        parts.append(int(digits or 0))
+    version = tuple((parts + [0, 0, 0])[:3])
+    return "vllm" if version >= (0, 26, 0) else "transformers"
 
 
 def load_rows(domain: str, split: str) -> list[dict[str, Any]]:
@@ -345,6 +399,8 @@ def write_summary(
             "skill_bank": str(args.skill_bank) if args.skill_bank else None,
             "prompt_template": str(args.prompt_template) if args.prompt_template else None,
             "model": str(args.model),
+            "backend": getattr(args, "resolved_backend", args.backend),
+            "model_impl": args.model_impl,
             "adapter": str(args.adapter) if args.adapter else None,
             "thinking": args.thinking,
             "visible_reasoning": args.visible_reasoning,
@@ -366,6 +422,7 @@ def write_summary(
 def main() -> None:
     args = parse_args()
     validate_args(args)
+    args.resolved_backend = resolve_eval_backend(args.model, args.backend)
     if args.input_json is not None and args.sample_ids_from is not None:
         raise SystemExit("Use either --input-json or --sample-ids-from, not both.")
     all_rows = (
@@ -392,7 +449,7 @@ def main() -> None:
     mode = "a" if args.resume and args.output.exists() else "w"
     print(
         f"RLHarness rows={len(selected)} complete={len(completed)} pending={len(pending)} "
-        f"thinking={args.thinking}",
+        f"thinking={args.thinking} backend={args.resolved_backend}",
         flush=True,
     )
     started = time.monotonic()
@@ -404,7 +461,6 @@ def main() -> None:
     os.environ["VLLM_USE_FLASHINFER_SAMPLER"] = "0"
     import torch
     from transformers import AutoProcessor
-    from vllm import LLM, SamplingParams
 
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is not available.")
@@ -412,6 +468,11 @@ def main() -> None:
         raise SystemExit(f"Model directory is missing: {args.model}")
     if args.adapter is not None and not (args.adapter / "adapter_config.json").is_file():
         raise SystemExit(f"LoRA adapter is missing or incomplete: {args.adapter}")
+    if args.resolved_backend == "transformers" and args.adapter is not None:
+        raise SystemExit(
+            "The direct Transformers backend accepts merged checkpoints only; "
+            "use --backend vllm for LoRA adapters."
+        )
     if args.skill_bank is not None and not args.skill_bank.is_file():
         raise SystemExit(f"Skill bank is missing: {args.skill_bank}")
     if args.prompt_template is not None and not args.prompt_template.is_file():
@@ -429,45 +490,73 @@ def main() -> None:
     )
 
     processor = AutoProcessor.from_pretrained(str(args.model), trust_remote_code=True)
-    llm_kwargs: dict[str, Any] = {}
+    effective_batch_size = args.batch_size
+    llm = None
+    sampling = None
     lora_request = None
-    if args.adapter is not None:
-        from vllm.lora.request import LoRARequest
+    hf_model = None
+    if args.resolved_backend == "vllm":
+        from vllm import LLM, SamplingParams
 
-        adapter_config = json.loads(
-            (args.adapter / "adapter_config.json").read_text(encoding="utf-8")
-        )
-        lora_rank = int(adapter_config.get("r", 16))
-        llm_kwargs.update(
-            enable_lora=True,
-            max_loras=1,
-            max_lora_rank=lora_rank,
-            enable_tower_connector_lora=args.enable_tower_connector_lora,
-        )
-        lora_request = LoRARequest("rlharness_eval_adapter", 1, str(args.adapter))
+        llm_kwargs: dict[str, Any] = {}
+        if args.model_impl != "auto":
+            llm_kwargs["model_impl"] = args.model_impl
+        if args.adapter is not None:
+            from vllm.lora.request import LoRARequest
 
-    llm = LLM(
-        model=str(args.model),
-        trust_remote_code=True,
-        dtype="bfloat16",
-        tensor_parallel_size=1,
-        gpu_memory_utilization=args.gpu_memory_utilization,
-        max_model_len=args.max_model_len,
-        max_num_seqs=args.batch_size,
-        limit_mm_per_prompt={"image": 1},
-        mm_processor_kwargs={"min_pixels": 3_136, "max_pixels": args.image_max_pixels},
-        generation_config="vllm",
-        enforce_eager=args.enforce_eager,
-        skip_mm_profiling=args.skip_mm_profiling,
-        **llm_kwargs,
-    )
-    sampling = SamplingParams(temperature=0.0, max_tokens=args.max_new_tokens, seed=0)
+            adapter_config = json.loads(
+                (args.adapter / "adapter_config.json").read_text(encoding="utf-8")
+            )
+            lora_rank = int(adapter_config.get("r", 16))
+            llm_kwargs.update(
+                enable_lora=True,
+                max_loras=1,
+                max_lora_rank=lora_rank,
+                enable_tower_connector_lora=args.enable_tower_connector_lora,
+            )
+            lora_request = LoRARequest("rlharness_eval_adapter", 1, str(args.adapter))
+
+        llm = LLM(
+            model=str(args.model),
+            trust_remote_code=True,
+            dtype="bfloat16",
+            tensor_parallel_size=1,
+            gpu_memory_utilization=args.gpu_memory_utilization,
+            max_model_len=args.max_model_len,
+            max_num_seqs=args.batch_size,
+            limit_mm_per_prompt={"image": 1},
+            mm_processor_kwargs={
+                "min_pixels": 3_136,
+                "max_pixels": args.image_max_pixels,
+            },
+            generation_config="vllm",
+            enforce_eager=args.enforce_eager,
+            skip_mm_profiling=args.skip_mm_profiling,
+            **llm_kwargs,
+        )
+        sampling = SamplingParams(
+            temperature=0.0,
+            max_tokens=args.max_new_tokens,
+            seed=0,
+        )
+    else:
+        from transformers import AutoModelForImageTextToText
+
+        effective_batch_size = 1
+        hf_model = AutoModelForImageTextToText.from_pretrained(
+            str(args.model),
+            dtype=torch.bfloat16,
+            device_map="cuda:0",
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+        )
+        hf_model.eval()
 
     completed_before = len(completed)
     try:
         with args.output.open(mode, encoding="utf-8") as handle:
-            for offset in range(0, len(pending), args.batch_size):
-                batch = pending[offset : offset + args.batch_size]
+            for offset in range(0, len(pending), effective_batch_size):
+                batch = pending[offset : offset + effective_batch_size]
                 batch_started = time.monotonic()
                 requests = [
                     build_request(
@@ -482,16 +571,78 @@ def main() -> None:
                     )
                     for row in batch
                 ]
-                outputs = llm.generate(
-                    requests,
-                    sampling_params=sampling,
-                    use_tqdm=False,
-                    lora_request=lora_request,
-                )
+                generated_rows: list[dict[str, Any]] = []
+                if args.resolved_backend == "vllm":
+                    outputs = llm.generate(
+                        requests,
+                        sampling_params=sampling,
+                        use_tqdm=False,
+                        lora_request=lora_request,
+                    )
+                    for output in outputs:
+                        generated = output.outputs[0]
+                        generated_rows.append(
+                            {
+                                "prediction": generated.text,
+                                "prompt_length": len(output.prompt_token_ids),
+                                "response_length": len(generated.token_ids),
+                                "finish_reason": generated.finish_reason,
+                            }
+                        )
+                else:
+                    texts = [request["prompt"] for request in requests]
+                    images = [
+                        request["multi_modal_data"]["image"] for request in requests
+                    ]
+                    model_inputs = processor(
+                        text=texts,
+                        images=images,
+                        padding=True,
+                        return_tensors="pt",
+                    )
+                    model_inputs = {
+                        key: value.to("cuda:0") if hasattr(value, "to") else value
+                        for key, value in model_inputs.items()
+                    }
+                    input_width = int(model_inputs["input_ids"].shape[1])
+                    prompt_lengths = model_inputs["attention_mask"].sum(dim=1).tolist()
+                    with torch.inference_mode():
+                        sequences = hf_model.generate(
+                            **model_inputs,
+                            max_new_tokens=args.max_new_tokens,
+                            do_sample=False,
+                            use_cache=True,
+                        )
+                    token_rows = sequences[:, input_width:]
+                    predictions = processor.batch_decode(
+                        token_rows,
+                        skip_special_tokens=True,
+                        clean_up_tokenization_spaces=False,
+                    )
+                    for prediction, tokens, prompt_length in zip(
+                        predictions,
+                        token_rows,
+                        prompt_lengths,
+                        strict=True,
+                    ):
+                        response_length = int(tokens.shape[0])
+                        generated_rows.append(
+                            {
+                                "prediction": prediction,
+                                "prompt_length": int(prompt_length),
+                                "response_length": response_length,
+                                "finish_reason": (
+                                    "length"
+                                    if response_length >= args.max_new_tokens
+                                    else "stop"
+                                ),
+                            }
+                        )
+                    for image in images:
+                        image.close()
                 seconds_per_sample = (time.monotonic() - batch_started) / len(batch)
-                for row, output in zip(batch, outputs, strict=True):
-                    generated = output.outputs[0]
-                    prediction = generated.text
+                for row, generated in zip(batch, generated_rows, strict=True):
+                    prediction = generated["prediction"]
                     scored = score_prediction(
                         prediction,
                         row["gt_route"],
@@ -509,16 +660,16 @@ def main() -> None:
                         "gt_route": str(row["gt_route"]),
                         "prediction": prediction,
                         **scored,
-                        "prompt_length": len(output.prompt_token_ids),
-                        "response_length": len(generated.token_ids),
-                        "finish_reason": generated.finish_reason,
+                        "prompt_length": generated["prompt_length"],
+                        "response_length": generated["response_length"],
+                        "finish_reason": generated["finish_reason"],
                         "seconds": round(seconds_per_sample, 3),
                         "thinking_enabled": args.thinking,
                         "visible_reasoning": args.visible_reasoning,
                         "reasoning_effort": args.reasoning_effort if args.thinking else None,
                         "model": str(args.model),
                         "adapter": str(args.adapter) if args.adapter else None,
-                        "backend": "vllm",
+                        "backend": args.resolved_backend,
                     }
                     handle.write(json.dumps(record, ensure_ascii=False) + "\n")
                     existing[record["sample_id"]] = record

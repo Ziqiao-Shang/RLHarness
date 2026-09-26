@@ -7,21 +7,54 @@ This repository does not redistribute raw MapTab images, tables, or question JSO
 
 Runtime raw data is stored in the sibling directory `../maptab_data/` by default. Set `MAPTAB_ROOT` to use another location.
 
-## Exact Historical Reproduction
+## Download by Locked Sample ID
 
-The current official release contains only test assets and cannot reconstruct the SFT/GRPO training sets used here. Exact reproduction requires a legally obtained historical MapTab snapshot:
+The current [MapTab Hugging Face release](https://huggingface.co/datasets/szq-nju/MapTab) contains the complete MetroMap and TravelMap planning train/test sources. RLHarness pins the official revision, interprets each committed ID as `<domain>:<source-split>:<row-index>`, and downloads only the images and tables referenced by Train1600, Val100, Test400, and reserved prompt examples:
 
 ```bash
 cd RLHarness
+bash scripts/prepare_data.sh --download
+```
+
+The command:
+
+1. Downloads the two only-vertex2 source JSON files for each selected domain.
+2. Checks the expected 6,400/1,600 MetroMap and 6,720/1,680 TravelMap row counts.
+3. Resolves the committed IDs against the original source row order.
+4. Downloads the unique referenced images/tables into `../maptab_data/`.
+5. Records the repository commit and materialized files under `.rlharness/`.
+
+The download is resumable and reuses the Hugging Face cache. Select one domain or another destination with:
+
+```bash
+bash scripts/prepare_data.sh --download \
+  --domain travelmap \
+  --destination /data/maptab_data
+
+export MAPTAB_ROOT=/data/maptab_data
+```
+
+## Lightweight Interface Check
+
+The smoke test downloads only a few source rows and their assets; it does not materialize the full locked subset:
+
+```bash
+bash scripts/prepare_data.sh --smoke-test --domain all
+# Increase to two train and two test examples per domain:
+bash scripts/prepare_data.sh --smoke-test --domain all --smoke-count 2
+```
+
+For every sampled ID it verifies source indexing, parses the JSON table, and asks Pillow to verify the downloaded image.
+
+## Import an Existing MapTab Tree
+
+`--source` may point to `MapTab/` itself or to a parent containing `MapTab/` or `data/raw/MapTab/`:
+
+```bash
 bash scripts/prepare_data.sh --source /path/to/MapTab
 ```
 
-`--source` may point to `MapTab/` itself or to a parent containing `MapTab/` or `data/raw/MapTab/`. The command:
-
-1. Locates the MetroMap and TravelMap directories.
-2. Copies the selected domains into `../maptab_data/`.
-3. Validates row counts and fixed split IDs.
-4. Stops if a target domain already exists instead of silently overwriting it.
+The importer copies the selected domain and applies the same row-count, ID, and asset checks.
 
 Validation only:
 
@@ -29,32 +62,11 @@ Validation only:
 bash scripts/prepare_data.sh --check-only
 ```
 
-Custom destination or one domain only:
+To inspect the pinned source paths and counts without downloading:
 
 ```bash
-bash scripts/prepare_data.sh \
-  --source /path/to/MapTab \
-  --destination /data/maptab_data \
-  --domain travelmap
-
-export MAPTAB_ROOT=/data/maptab_data
+bash scripts/prepare_data.sh --download --dry-run
 ```
-
-## Download the Current Public Test Set
-
-The current [MapTab Hugging Face release](https://huggingface.co/datasets/szq-nju/MapTab) exposes only MetroMap and TravelMap test assets. Download them to a separate directory with:
-
-```bash
-bash scripts/prepare_data.sh --download-public-test
-```
-
-The default destination is `../maptab_public_test/`, which stores the original archives, extracted files, and a download manifest. To print download URLs without downloading:
-
-```bash
-bash scripts/prepare_data.sh --download-public-test --dry-run
-```
-
-This public release is not byte-identical to the historical snapshot. It is therefore not written to `MAPTAB_ROOT` and cannot replace the locked historical Test400.
 
 ## Runtime Data
 
@@ -76,10 +88,10 @@ The training workflow never selects new examples from the full raw corpus. The r
 
 ## Required Data Scope
 
-The historical snapshot must include:
+The source metadata contains:
 
 - MetroMap only-vertex2: 6,400 training rows and 1,600 test rows.
 - TravelMap only-vertex2: 6,720 training rows and 1,680 test rows.
-- Map images and vertex tables referenced by those rows.
+- Map images and vertex tables are materialized only for the committed IDs.
 
-The historical MetroMap Train/Val split is sample-disjoint but contains overlapping maps, so it is not described as map-disjoint. TravelMap split constraints are recorded in its manifest.
+The MetroMap Train/Val split is sample-disjoint but contains overlapping maps, so it is not described as map-disjoint. TravelMap split constraints are recorded in its manifest.

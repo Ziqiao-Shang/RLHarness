@@ -6,13 +6,13 @@
   },
   "official_public_release": {
     "url": "https://huggingface.co/datasets/szq-nju/MapTab",
-    "revision": "93bf27ae4387ff33f61d627063c77c9596e3e67c",
-    "scope": "test_only",
-    "note": "The current official release contains test assets only and is not byte-identical to the historical snapshot used by this repository."
+    "revision": "83efbbee2d6f2f8a1fbf278201f3754029b341f1",
+    "scope": "complete_train_test",
+    "note": "RLHarness maps committed row-index IDs to the raw only-vertex2 train/test JSON files and downloads only their referenced assets."
   },
-  "historical_reproduction": {
-    "status": "manual_source_required",
+  "reproduction": {
+    "status": "official_download_supported",
     "default_external_root": "../maptab_data",
-    "note": "Provide a legally obtained historical MapTab snapshot. The preparation command imports the selected domain and validates its expected structure and split sizes."
+    "note": "Use scripts/prepare_data.sh --download for the full locked subset or --smoke-test to verify a few official records and assets."
   }
 }

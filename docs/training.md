@@ -29,8 +29,8 @@ Raw data and original 15-skill prompt for the selected domain
 ```bash
 cd RLHarness
 
-# First run: import a legally obtained MapTab snapshot.
-bash scripts/prepare_data.sh --source /path/to/MapTab
+# First run: download the records/assets addressed by the locked IDs.
+bash scripts/prepare_data.sh --download
 
 export QWEN35_MODEL=/path/to/Qwen3.5-9B
 export OPENLUX_API_KEY=YOUR_KEY
@@ -45,7 +45,7 @@ export SKILL_EVOLUTION_PYTHON=/path/to/skill-evolution-env/bin/python
 bash scripts/verify_release.sh
 ```
 
-The default data location is the sibling directory `../maptab_data/`. Set `MAPTAB_ROOT=/path/to/maptab_data` to use another location. The current official MapTab release contains only test assets and cannot replace the complete historical training snapshot required by this workflow. See [`data/README.md`](../data/README.md).
+The default data location is the sibling directory `../maptab_data/`. Set `MAPTAB_ROOT=/path/to/maptab_data` to use another location. The downloader uses the pinned complete official MapTab release and materializes only assets referenced by the locked IDs. Use `--smoke-test` to check a few official records without downloading the full subset. See [`data/README.md`](../data/README.md).
 
 The release includes pinned LLaMA-Factory and VERL source trees, but not raw MapTab assets, Python environments, or Qwen3.5-9B weights.
 

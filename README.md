@@ -10,6 +10,49 @@ Both domains share the training and evaluation implementation while retaining do
 
 Multimodal reasoning requires models to preserve visual evidence through long decision chains while selecting appropriate procedures across diverse scenarios and rules. When learning is guided only by terminal verifiers, reinforcement learning (RL) reveals whether a final answer is correct but not how it should be produced. The policy must therefore discover reusable reasoning procedures while learning to execute them, creating a program cold-start problem. Skills can externalize successful procedures, reduce repeated exploration, and provide inspectable guidance. However, a fixed Skill Bank assumes that this guidance remains compatible with an evolving policy, while updating Skills alone can leave their triggers, execution protocols, and demonstrations stale or mutually inconsistent. We introduce RLHarness, which organizes Skills, selection and execution protocols, few-shot demonstrations, and task contracts into a unified, versioned Harness and alternates Harness evolution with policy learning. An Exploration--Distillation Harness builds the initial Harness and version-aligned verified traces for SFT and DAPO I. After the first RL block, a Post-RL Reconstruction Harness rebuilds Skills, protocols, and demonstrations from fresh success--failure rollouts, and DAPO II adapts the policy to the reconstructed program. RLHarness improves Accuracy from 16.25%/27.50% to 62.00%/50.00% on MetroMap/TravelMap and raises F1 score from 37.13%/45.50% to 65.81%/65.51% on Fee-VL/Cancel-VL. All four tasks achieve their best results only after reconstruction and DAPO II, showing that an evolving Harness complements RL by continually updating the external program that the policy learns to execute.
 
+## Public Releases
+
+Raw data and trained weights stay outside Git. Both are downloaded from Hugging Face by the repository entry points:
+
+| Artifact | Hugging Face repository | RLHarness command |
+| --- | --- | --- |
+| MapTab data | [`szq-nju/MapTab`](https://huggingface.co/datasets/szq-nju/MapTab) | `bash scripts/prepare_data.sh --download --domain <domain>` |
+| Merged checkpoints | [`szq-nju/RLHarness-MapTab-Models`](https://huggingface.co/szq-nju/RLHarness-MapTab-Models) | `bash scripts/07_evaluate_pretrained.sh --domain <domain>` |
+
+The data downloader pins the official MapTab revision and resolves the committed Train1600, Val100, Test400, and prompt-example IDs against the original row order. It materializes only their referenced images and tables. The model downloader selects only `metromap_trained/` or `travelmap_trained/`, validates the safetensors index and every shard, and reuses the Hugging Face cache on later runs.
+
+## Quick Start: Released Data and Model
+
+The shortest end-to-end path uses the released TravelMap checkpoint. A CUDA-enabled PyTorch installation is required for inference; the verified full environment is documented in [`docs/environment.md`](docs/environment.md).
+
+```bash
+git clone https://github.com/Ziqiao-Shang/RLHarness.git
+cd RLHarness
+
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m pip install "transformers>=5.10.0" accelerate safetensors torch
+
+# Download only the locked TravelMap records and their referenced assets.
+bash scripts/prepare_data.sh --download --domain travelmap
+
+# Download travelmap_trained/ from Hugging Face and evaluate fixed Test400.
+GPU_IDS="0" bash scripts/07_evaluate_pretrained.sh --domain travelmap
+```
+
+Use `--domain metromap` for MetroMap. To check the official dataset interface without materializing the locked subset, and to validate a checkpoint without launching inference:
+
+```bash
+bash scripts/prepare_data.sh --smoke-test --domain all
+
+# This downloads the selected checkpoint if it is not already cached.
+bash scripts/07_evaluate_pretrained.sh --domain travelmap --check-only
+```
+
+The default external locations are `../maptab_data/` for MapTab and `models/release/` for checkpoints. Override them with `MAPTAB_ROOT` and `RLHARNESS_MODEL_ROOT`. `models/`, generated data, artifacts, and results are ignored by Git.
+
 ## Configuration
 
 | Item | Fixed setting |
@@ -74,10 +117,10 @@ configs/                  SkillOpt, SFT, and GRPO configurations
 data/                     data sources and fixed split IDs
 docs/                     training, environment, and reward documentation
 prompts/                  initialization, SFT, evolution, and student prompts
-scripts/                  data preparation and stage 00-06 entry points
+scripts/                  data preparation and stage 00-07 entry points
 src/rlharness/            data, training, evolution, reward, and evaluation code
 src/skillopt/             installed SkillOpt engine and prompts
-tests/                    API-free and GPU-free regression tests
+tests/                    regression tests; data integration tests use prepared MapTab
 third_party/              pinned LLaMA-Factory, VERL, and SkillOpt provenance
 ```
 
@@ -88,7 +131,7 @@ Generated `data/generated/`, `artifacts/`, and `results/` directories are ignore
 Python 3.10 or newer is required.
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Ziqiao-Shang/RLHarness.git
 cd RLHarness
 
 python -m venv .venv
@@ -110,13 +153,13 @@ Never write real credentials into a configuration, prompt, script, or Git commit
 
 ## Data Preparation
 
-This repository does not redistribute raw MapTab images, vertex tables, or question files. After obtaining a valid MapTab snapshot that includes the training data, run:
+This repository does not redistribute raw MapTab images, vertex tables, or question files. The preparation command reads the committed sample IDs, locates those rows in the complete official [MapTab dataset](https://huggingface.co/datasets/szq-nju/MapTab), and downloads only the referenced assets:
 
 ```bash
-bash scripts/prepare_data.sh --source /path/to/MapTab
+bash scripts/prepare_data.sh --download
 ```
 
-Data is written to the sibling directory `../maptab_data/` by default. To use another location, set:
+The official revision is pinned in the code so the row-index IDs cannot drift. Data is written to the sibling directory `../maptab_data/` by default. To use another location, set:
 
 ```bash
 export MAPTAB_ROOT=/path/to/maptab_data
@@ -128,7 +171,13 @@ To validate an existing data directory without copying data:
 bash scripts/prepare_data.sh --check-only
 ```
 
-See [`data/README.md`](data/README.md) for source information, the expected layout, and public test-set download instructions.
+To verify the Hub interface without downloading the complete locked subset, test one train and one test example from each domain:
+
+```bash
+bash scripts/prepare_data.sh --smoke-test --domain all
+```
+
+An existing complete MapTab tree can still be imported with `--source /path/to/MapTab`. See [`data/README.md`](data/README.md) for source information, selection behavior, and the expected layout.
 
 ## Running RLHarness
 
@@ -256,9 +305,9 @@ results/travelmap/test400/predictions.summary.json
 
 ### Evaluate the Released Full Models
 
-The public model repository, [`szq-nju/RLHarness-MapTab-Models`](https://huggingface.co/szq-nju/RLHarness-MapTab-Models), stores two independent, fully merged checkpoints under `metromap/` and `travelmap/`. Each checkpoint already contains the Qwen3.5-9B base, SFT update, and selected RL update; no additional LoRA adapter is required.
+The public model repository, [`szq-nju/RLHarness-MapTab-Models`](https://huggingface.co/szq-nju/RLHarness-MapTab-Models), stores two independent, fully merged checkpoints under `metromap_trained/` and `travelmap_trained/`. Each checkpoint already contains the Qwen3.5-9B base, SFT update, and selected RL update; no additional LoRA adapter is required.
 
-The following commands download only the selected domain subfolder, apply the committed final Prompt, and evaluate the locked Test400 split with vLLM:
+The following commands download only the selected domain subfolder, apply the committed final Prompt, and evaluate the locked Test400 split. Qwen3.5 uses native vLLM in the verified vLLM 0.26+ environment; older local vLLM installations automatically fall back to direct Transformers generation for merged checkpoints:
 
 ```bash
 VLLM_PYTHON=/path/to/vllm-env/bin/python \
@@ -270,16 +319,26 @@ GPU_IDS="0 1 2 3" \
 bash scripts/07_evaluate_pretrained.sh --domain travelmap
 ```
 
-Downloads are stored under `models/release/` and reused on subsequent runs. Set `RLHARNESS_MODEL_ROOT` to change that location. `RLHARNESS_MODEL_REPO` and `RLHARNESS_MODEL_REVISION` can point to a mirror or an immutable Hub revision. The lower-level training and evaluation scripts continue to support `MODEL_PATH` plus an optional `ADAPTER_PATH`, so locally trained LoRA checkpoints remain usable even though the public reproduction path uses complete merged weights.
+Downloads are stored under `models/release/` and reused on subsequent runs. The downloader validates the remote subfolder, local model index, and every referenced weight shard before passing the resolved local path to the evaluator. Set `RLHARNESS_MODEL_ROOT` to change the download location. `RLHARNESS_MODEL_REPO`, `RLHARNESS_MODEL_REVISION`, and `RLHARNESS_MODEL_SUBFOLDER` can point to a mirror, an immutable Hub revision, or a different repository layout. Set `RLHARNESS_EVAL_BACKEND=vllm` or `transformers` to override automatic backend selection. The lower-level training and evaluation scripts continue to support `MODEL_PATH` plus an optional `ADAPTER_PATH`, so locally trained LoRA checkpoints remain usable even though the public reproduction path uses complete merged weights.
+
+To validate a local merged checkpoint and its prompt without downloading weights, materializing Test400, or starting vLLM:
+
+```bash
+MODEL_PATH=/path/to/travelmap_trained \
+bash scripts/07_evaluate_pretrained.sh --domain travelmap --check-only
+```
 
 ## Local Validation
 
-These checks do not call a model API or start GPU training:
+These checks do not call a model API or start GPU training. The complete unittest suite expects the locked MapTab data to have been prepared; the release checker and model/data unit tests can run independently:
 
 ```bash
 bash scripts/verify_release.sh
-python -m unittest discover -s tests -v
+python -m unittest tests.test_prepare_data tests.test_model_release -v
 python -m compileall -q src
+
+# After preparing the locked MapTab subset:
+python -m unittest discover -s tests -v
 ```
 
 The release check validates fixed splits, configuration inheritance, required prompt sections, Python syntax, credential leakage, and accidental inclusion of raw data or model weights.

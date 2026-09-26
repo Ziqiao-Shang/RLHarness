@@ -90,6 +90,13 @@ export VERL_PYTHON=/path/to/verl-env/bin/python
 export VLLM_PYTHON=/path/to/verl-env/bin/python
 ```
 
+`eval_local` selects native vLLM for Qwen3.5 when vLLM 0.26 or newer is
+installed. For older local vLLM versions, merged checkpoints fall back to
+direct Transformers generation with batch size one. Set
+`RLHARNESS_EVAL_BACKEND=vllm` or `transformers` to override this choice;
+the direct Transformers path requires Accelerate and does not load LoRA
+adapters.
+
 ## Environment Boundaries
 
 - Do not force LLaMA-Factory and VERL/vLLM into one environment. Their verified Transformers, PEFT, and Accelerate versions differ.

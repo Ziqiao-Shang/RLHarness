@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Import or verify external MapTab data without storing raw assets in this repository.
+# Download, import, or verify MapTab data without storing raw assets in this repository.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
